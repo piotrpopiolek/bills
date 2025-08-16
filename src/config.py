@@ -4,16 +4,18 @@ from pydantic_settings import BaseSettings
 from pydantic import Field, validator
 
 class Settings(BaseSettings):
-    """Konfiguracja aplikacji dla Railway - minimalna i prosta."""
+    """Konfiguracja aplikacji dla Railway - z wartościami domyślnymi dla development."""
     
     # Baza danych - Railway automatycznie ustawia DATABASE_URL
     database_url: str = Field(
+        default="postgresql+asyncpg://postgres:password@localhost:5432/bills",
         env="DATABASE_URL",
         description="URL połączenia z bazą danych PostgreSQL (Railway)"
     )
     
     # JWT
     jwt_secret_key: str = Field(
+        default="dev-secret-key-change-in-production",
         env="JWT_SECRET_KEY",
         description="Sekretny klucz do podpisywania tokenów JWT"
     )
@@ -25,10 +27,12 @@ class Settings(BaseSettings):
     
     # Redis - Railway ustawia te zmienne
     redis_host: str = Field(
+        default="localhost",
         env="REDIS_HOST",
         description="Host serwera Redis (Railway)"
     )
     redis_port: int = Field(
+        default=6379,
         env="REDIS_PORT",
         description="Port serwera Redis (Railway)"
     )
@@ -40,26 +44,29 @@ class Settings(BaseSettings):
     
     # Telegram
     telegram_bot_token: Optional[str] = Field(
+        default=None,
         env="TELEGRAM_BOT_TOKEN",
         description="Token bota Telegram"
     )
     telegram_webhook_url: Optional[str] = Field(
+        default=None,
         env="TELEGRAM_WEBHOOK_URL",
         description="URL webhook dla bota Telegram"
     )
     
     # Aplikacja - Railway ustawia PORT
     environment: str = Field(
-        default="production",
+        default="development",
         env="ENVIRONMENT",
         description="Środowisko uruchomienia aplikacji"
     )
     secret_key: str = Field(
+        default="dev-app-secret-key-change-in-production",
         env="SECRET_KEY",
         description="Główny klucz sekretny aplikacji"
     )
     debug: bool = Field(
-        default=False,
+        default=True,
         env="DEBUG",
         description="Tryb debugowania"
     )
@@ -69,6 +76,7 @@ class Settings(BaseSettings):
         description="Host na którym nasłuchuje aplikacja"
     )
     port: int = Field(
+        default=8000,
         env="PORT",  # Railway zawsze ustawia PORT
         description="Port na którym nasłuchuje aplikacja (Railway)"
     )
@@ -86,7 +94,7 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return int(v)
         return v
-
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
