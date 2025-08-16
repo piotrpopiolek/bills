@@ -103,6 +103,9 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.production
+.env.staging
 .cursorrules
 .venv
 env/
@@ -110,6 +113,10 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Railway
+railway.env
+railway.env.local
 
 # Spyder project settings
 .spyderproject
@@ -148,6 +155,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+logs/*.log
 
 # Database
 *.db
