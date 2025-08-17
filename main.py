@@ -45,15 +45,11 @@ app.add_middleware(
     ]
 )
 
-@app.get("/")
-async def main():
-    return {"message": "Hello World"}
+register_middleware(app)
 
-# register_middleware(app)
-
-# app.include_router(router_bill, prefix=f"/api/{version}")
-# app.include_router(router_category, prefix=f"/api/{version}")
-# app.include_router(router_index, prefix=f"/api/{version}")
-# app.include_router(router_shop, prefix=f"/api/{version}")
-# app.include_router(router_user, prefix=f"/api/{version}")
+app.include_router(router_bill, prefix=f"/api/{version}")
+app.include_router(router_category, prefix=f"/api/{version}")
+app.include_router(router_index, prefix=f"/api/{version}")
+app.include_router(router_shop, prefix=f"/api/{version}")
+app.include_router(router_user, prefix=f"/api/{version}")
 # app.include_router(router_telegram, prefix="/telegram")
