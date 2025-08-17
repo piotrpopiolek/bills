@@ -39,14 +39,14 @@ def register_middleware(app: FastAPI):
         return response
 
     app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["*"]
+    )
+
+    app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
         allow_credentials=True,
-    )
-
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=["localhost", "127.0.0.1","0.0.0.0"],
     )
