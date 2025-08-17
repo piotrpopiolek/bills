@@ -1,6 +1,5 @@
 import logging
 import os
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from dotenv import load_dotenv
@@ -36,20 +35,11 @@ app = FastAPI(
     title="Bills API", 
     description="API for managing bills")
 
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=[
-        "localhost", 
-        "127.0.0.1",
-        "*"
-    ]
-)
-
-# register_middleware(app)
+register_middleware(app)
 
 app.include_router(router_bill, prefix=f"/api/{version}")
 app.include_router(router_category, prefix=f"/api/{version}")
 app.include_router(router_index, prefix=f"/api/{version}")
 app.include_router(router_shop, prefix=f"/api/{version}")
 app.include_router(router_user, prefix=f"/api/{version}")
-# app.include_router(router_telegram, prefix="/telegram")
+app.include_router(router_telegram, prefix="/telegram")
