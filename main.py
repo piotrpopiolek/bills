@@ -45,7 +45,7 @@ app.add_middleware(
     ]
 )
 
-register_middleware(app)
+# register_middleware(app)
 
 app.include_router(router_bill, prefix=f"/api/{version}")
 app.include_router(router_category, prefix=f"/api/{version}")
