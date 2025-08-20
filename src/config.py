@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # Baza danych - Railway automatycznie ustawia DATABASE_URL
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:password@test:5432/bills",
+        default="postgresql+asyncpg://postgres:password@localhost:5432/bills",
         env="DATABASE_URL",
         description="URL połączenia z bazą danych PostgreSQL (Railway)"
     )
