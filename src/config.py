@@ -5,7 +5,7 @@ from pydantic import Field, validator
 
 class Settings(BaseSettings):
     """Konfiguracja aplikacji dla Railway - z wartościami domyślnymi dla development."""
-    
+
     # Baza danych - Railway automatycznie ustawia DATABASE_URL
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:password@localhost:5432/bills",
@@ -115,7 +115,6 @@ broker_connection_retry_on_startup = True
 
 # Zachowujemy kompatybilność wsteczną dla istniejącego kodu
 class Config:
-    """Klasa kompatybilności wstecznej - DEPRECATED, użyj settings"""
     DATABASE_URL: str = settings.database_url
     JWT_SECRET_KEY: str = settings.jwt_secret_key
     JWT_ALGORITHM: str = settings.jwt_algorithm

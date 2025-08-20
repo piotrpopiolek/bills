@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
 
 version = "v1"
 
-app = FastAPI(
+app = FastAPI(lifespan=lifespan,
     version=version, 
     title="Bills API", 
     description="API for managing bills")

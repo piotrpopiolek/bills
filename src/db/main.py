@@ -15,7 +15,6 @@ async def init_db():
     Initialize the database.
     """
     async with engine.begin() as conn:
-        print("Creating tables...")
         await conn.run_sync(SQLModel.metadata.create_all)
 
 async def get_session() -> AsyncSession:
