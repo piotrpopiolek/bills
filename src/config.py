@@ -3,130 +3,166 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
 
-class Settings(BaseSettings):
+class Config(BaseSettings):
     """Konfiguracja aplikacji dla Railway - z wartościami domyślnymi dla development."""
 
     # Baza danych - Railway automatycznie ustawia DATABASE_URL
-    database_url: str = Field(
+    DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:password@localhost:5432/bills",
         env="DATABASE_URL",
         description="URL połączenia z bazą danych PostgreSQL (Railway)"
     )
     
     # JWT
-    jwt_secret_key: str = Field(
+    JWT_SECRET_KEY: str = Field(
         default="dev-secret-key-change-in-production",
         env="JWT_SECRET_KEY",
         description="Sekretny klucz do podpisywania tokenów JWT"
     )
-    jwt_algorithm: str = Field(
+    
+    JWT_ALGORITHM: str = Field(
         default="HS256",
         env="JWT_ALGORITHM",
         description="Algorytm podpisywania JWT"
     )
     
     # Redis - Railway ustawia te zmienne
-    redis_host: str = Field(
+    REDIS_HOST: str = Field(
         default="localhost",
         env="REDIS_HOST",
         description="Host serwera Redis (Railway)"
     )
-    redis_port: int = Field(
+    
+    REDIS_PORT: int = Field(
         default=6379,
         env="REDIS_PORT",
         description="Port serwera Redis (Railway)"
     )
-    redis_password: Optional[str] = Field(
+    
+    REDIS_PASSWORD: Optional[str] = Field(
         default=None,
         env="REDIS_PASSWORD",
         description="Hasło Redis (Railway)"
     )
     
     # Telegram
-    telegram_bot_token: Optional[str] = Field(
+    TELEGRAM_BOT_TOKEN: Optional[str] = Field(
         default=None,
         env="TELEGRAM_BOT_TOKEN",
         description="Token bota Telegram"
     )
-    telegram_webhook_url: Optional[str] = Field(
+    
+    TELEGRAM_WEBHOOK_URL: Optional[str] = Field(
         default=None,
         env="TELEGRAM_WEBHOOK_URL",
         description="URL webhook dla bota Telegram"
     )
     
     # Aplikacja - Railway ustawia PORT
-    environment: str = Field(
+    ENVIRONMENT: str = Field(
         default="development",
         env="ENVIRONMENT",
         description="Środowisko uruchomienia aplikacji"
     )
-    secret_key: str = Field(
+    
+    SECRET_KEY: str = Field(
         default="dev-app-secret-key-change-in-production",
         env="SECRET_KEY",
         description="Główny klucz sekretny aplikacji"
     )
-    debug: bool = Field(
+    
+    DEBUG: bool = Field(
         default=True,
         env="DEBUG",
         description="Tryb debugowania"
     )
-    host: str = Field(
+    
+    HOST: str = Field(
         default="0.0.0.0",
         env="HOST",
         description="Host na którym nasłuchuje aplikacja"
     )
-    port: int = Field(
+    
+    PORT: int = Field(
         default=8000,
         env="PORT",  # Railway zawsze ustawia PORT
         description="Port na którym nasłuchuje aplikacja (Railway)"
     )
     
-    @validator('debug', pre=True)
+    # ✅ WALIDATORY - konwertują stringi z Railway na odpowiednie typy
+    @validator('DEBUG', pre=True)
     def parse_debug(cls, v):
         """Konwertuje string 'true'/'false' na boolean dla Railway"""
         if isinstance(v, str):
             return v.lower() in ('true', '1', 'yes', 'on')
         return v
     
-    @validator('port', pre=True)
+    @validator('PORT', pre=True)
     def parse_port(cls, v):
         """Konwertuje string na int dla Railway"""
         if isinstance(v, str):
             return int(v)
         return v
     
+    @validator('REDIS_PORT', pre=True)
+    def parse_redis_port(cls, v):
+        """Konwertuje string na int dla Railway"""
+        if isinstance(v, str):
+            return int(v)
+        return v
+    
+    # ✅ KONFIGURACJA PYDANTIC
     class Config:
-        env_file = ".env"
+        env_file = ".env"  # Plik .env dla development
         env_file_encoding = "utf-8"
-        case_sensitive = False
+        case_sensitive = False  # Railway używa UPPERCASE
+        env_prefix = ""  # Brak prefiksu dla zmiennych Railway
 
 # Instancja konfiguracji
-settings = Settings()
+config = Config()
+
+# ✅ FUNKCJA WALIDACJI - sprawdza czy Railway ustawił wymagane zmienne
+def validate_railway_config():
+    """Sprawdza czy wymagane zmienne Railway są ustawione."""
+    required_vars = {
+        "DATABASE_URL": config.DATABASE_URL,
+        "JWT_SECRET_KEY": config.JWT_SECRET_KEY,
+        "PORT": config.PORT,
+    }
+    
+    missing_vars = [name for name, value in required_vars.items() if not value]
+    
+    if missing_vars:
+        print(f"⚠️  Warning: Missing Railway variables: {missing_vars}")
+        print("   Using default values for development...")
+    else:
+        print("✅ Railway configuration validated successfully!")
+    
+    # Debug info
+    print(f"📊 Database URL: {config.DATABASE_URL}")
+    print(f"🔐 JWT Secret: {config.JWT_SECRET_KEY[:10]}...")
+    print(f"🌍 Environment: {config.ENVIRONMENT}")
+    print(f"�� Port: {config.PORT}")
 
 # Redis URLs - z obsługą hasła
-if settings.redis_password:
-    broker_url = f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}/0"
-    result_backend = f"redis://:{settings.redis_password}@{settings.redis_host}:{settings.redis_port}/0"
+if config.REDIS_PASSWORD:
+    broker_url = f"redis://:{config.REDIS_PASSWORD}@{config.REDIS_HOST}:{config.REDIS_PORT}/0"
+    result_backend = f"redis://:{config.REDIS_PASSWORD}@{config.REDIS_HOST}:{config.REDIS_PORT}/0"
 else:
-    broker_url = f"redis://{settings.redis_host}:{settings.redis_port}/0"
-    result_backend = f"redis://{settings.redis_host}:{settings.redis_port}/0"
+    broker_url = f"redis://{config.REDIS_HOST}:{config.REDIS_PORT}/0"
+    result_backend = f"redis://{config.REDIS_HOST}:{config.REDIS_PORT}/0"
 
 broker_connection_retry_on_startup = True
 
-# Zachowujemy kompatybilność wsteczną dla istniejącego kodu
-class Config:
-    DATABASE_URL: str = settings.database_url
-    JWT_SECRET_KEY: str = settings.jwt_secret_key
-    JWT_ALGORITHM: str = settings.jwt_algorithm
-    REDIS_HOST: str = settings.redis_host
-    REDIS_PORT: int = settings.redis_port
-    TELEGRAM_BOT_TOKEN: Optional[str] = settings.telegram_bot_token
-    TELEGRAM_WEBHOOK_URL: Optional[str] = settings.telegram_webhook_url
-    ENVIRONMENT: str = settings.environment
-    SECRET_KEY: str = settings.secret_key
-    DEBUG: bool = settings.debug
-    HOST: str = settings.host
-    PORT: int = settings.port
-
-# Instancja konfiguracji dla kompatybilności wstecznej
-config = Config()
+# ✅ TEST KONFIGURACJI - uruchom: python src/config.py
+if __name__ == "__main__":
+    print("🔍 Testing Railway configuration...")
+    print(f"Environment: {os.getenv('ENVIRONMENT', 'Not set')}")
+    print(f"DATABASE_URL: {os.getenv('DATABASE_URL', 'Not set')}")
+    print(f"JWT_SECRET_KEY: {os.getenv('JWT_SECRET_KEY', 'Not set')}")
+    
+    try:
+        validate_railway_config()
+        print("✅ Configuration is valid!")
+    except Exception as e:
+        print(f"❌ Configuration error: {e}")
