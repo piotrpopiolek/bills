@@ -8,8 +8,8 @@ class Config(BaseSettings):
 
     # Baza danych - Railway automatycznie ustawia DATABASE_URL
     DATABASE_URL: str = Field(
-        default="${{production.DATABASE_URL}}",
-        env="${{production.DATABASE_URL}}",
+        default="",
+        env="DATABASE_URL",
         description="URL połączenia z bazą danych PostgreSQL (Railway)"
     )
     
