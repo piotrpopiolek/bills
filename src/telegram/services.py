@@ -7,7 +7,7 @@ import logging
 
 from src.db.models import TelegramMessage, User, TelegramMessageStatus
 from src.telegram.schemas import TelegramWebhook, BotCommandList
-from src.config import Config
+from src.config import config
 
 logger = logging.getLogger(__name__)
 

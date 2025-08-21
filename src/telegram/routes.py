@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.db.main import get_session
 from src.telegram import services
 from src.telegram.schemas import TelegramWebhook, BotCommand, BotCommandList
-from src.config import Config
+from src.config import config
 
 router = APIRouter()
 
