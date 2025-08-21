@@ -3,120 +3,71 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field, validator
 
-class Config(BaseSettings):
-    """Konfiguracja aplikacji dla Railway - z wartościami domyślnymi dla development."""
+class Config:
+    """Konfiguracja aplikacji dla Railway - używamy os.environ.get()"""
 
     # Baza danych - Railway automatycznie ustawia DATABASE_URL
-    DATABASE_URL: str = Field(
-        default="",
-        env="DATABASE_URL",
-        description="URL połączenia z bazą danych PostgreSQL (Railway)"
-    )
+    @property
+    def DATABASE_URL(self) -> str:
+        return os.environ.get("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/bills")
     
     # JWT
-    JWT_SECRET_KEY: str = Field(
-        default="dev-secret-key-change-in-production",
-        env="JWT_SECRET_KEY",
-        description="Sekretny klucz do podpisywania tokenów JWT"
-    )
+    @property
+    def JWT_SECRET_KEY(self) -> str:
+        return os.environ.get("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
     
-    JWT_ALGORITHM: str = Field(
-        default="HS256",
-        env="JWT_ALGORITHM",
-        description="Algorytm podpisywania JWT"
-    )
+    @property
+    def JWT_ALGORITHM(self) -> str:
+        return os.environ.get("JWT_ALGORITHM", "HS256")
     
     # Redis - Railway ustawia te zmienne
-    REDIS_HOST: str = Field(
-        default="localhost",
-        env="REDIS_HOST",
-        description="Host serwera Redis (Railway)"
-    )
+    @property
+    def REDIS_HOST(self) -> str:
+        return os.environ.get("REDIS_HOST", "localhost")
     
-    REDIS_PORT: int = Field(
-        default=6379,
-        env="REDIS_PORT",
-        description="Port serwera Redis (Railway)"
-    )
+    @property
+    def REDIS_PORT(self) -> int:
+        port = os.environ.get("REDIS_PORT", "6379")
+        return int(port) if port else 6379
     
-    REDIS_PASSWORD: Optional[str] = Field(
-        default=None,
-        env="REDIS_PASSWORD",
-        description="Hasło Redis (Railway)"
-    )
+    @property
+    def REDIS_PASSWORD(self) -> Optional[str]:
+        return os.environ.get("REDIS_PASSWORD")
     
     # Telegram
-    TELEGRAM_BOT_TOKEN: Optional[str] = Field(
-        default=None,
-        env="TELEGRAM_BOT_TOKEN",
-        description="Token bota Telegram"
-    )
+    @property
+    def TELEGRAM_BOT_TOKEN(self) -> Optional[str]:
+        return os.environ.get("TELEGRAM_BOT_TOKEN")
     
-    TELEGRAM_WEBHOOK_URL: Optional[str] = Field(
-        default=None,
-        env="TELEGRAM_WEBHOOK_URL",
-        description="URL webhook dla bota Telegram"
-    )
+    @property
+    def TELEGRAM_WEBHOOK_URL(self) -> Optional[str]:
+        return os.environ.get("TELEGRAM_WEBHOOK_URL")
     
     # Aplikacja - Railway ustawia PORT
-    ENVIRONMENT: str = Field(
-        default="development",
-        env="ENVIRONMENT",
-        description="Środowisko uruchomienia aplikacji"
-    )
+    @property
+    def ENVIRONMENT(self) -> str:
+        return os.environ.get("ENVIRONMENT", "development")
     
-    SECRET_KEY: str = Field(
-        default="dev-app-secret-key-change-in-production",
-        env="SECRET_KEY",
-        description="Główny klucz sekretny aplikacji"
-    )
+    @property
+    def SECRET_KEY(self) -> str:
+        return os.environ.get("SECRET_KEY", "dev-app-secret-key-change-in-production")
     
-    DEBUG: bool = Field(
-        default=True,
-        env="DEBUG",
-        description="Tryb debugowania"
-    )
+    @property
+    def DEBUG(self) -> bool:
+        debug = os.environ.get("DEBUG", "true")
+        return debug.lower() in ('true', '1', 'yes', 'on')
     
-    HOST: str = Field(
-        default="0.0.0.0",
-        env="HOST",
-        description="Host na którym nasłuchuje aplikacja"
-    )
+    @property
+    def HOST(self) -> str:
+        return os.environ.get("HOST", "0.0.0.0")
     
-    PORT: int = Field(
-        default=8000,
-        env="PORT",  # Railway zawsze ustawia PORT
-        description="Port na którym nasłuchuje aplikacja (Railway)"
-    )
-    
-    # ✅ WALIDATORY - konwertują stringi z Railway na odpowiednie typy
-    @validator('DEBUG', pre=True)
-    def parse_debug(cls, v):
-        """Konwertuje string 'true'/'false' na boolean dla Railway"""
-        if isinstance(v, str):
-            return v.lower() in ('true', '1', 'yes', 'on')
-        return v
-    
-    @validator('PORT', pre=True)
-    def parse_port(cls, v):
-        """Konwertuje string na int dla Railway"""
-        if isinstance(v, str):
-            return int(v)
-        return v
-    
-    @validator('REDIS_PORT', pre=True)
-    def parse_redis_port(cls, v):
-        """Konwertuje string na int dla Railway"""
-        if isinstance(v, str):
-            return int(v)
-        return v
-    
-    # ✅ KONFIGURACJA PYDANTIC
-    class Config:
-        env_file = "process.env"  # Plik .env dla development
-        env_file_encoding = "utf-8"
-        case_sensitive = False  # Railway używa UPPERCASE
-        env_prefix = ""  # Brak prefiksu dla zmiennych Railway
+    @property
+    def PORT(self) -> int:
+        port = os.environ.get("PORT", "8000")
+        return int(port) if port else 8000
+
+# Instancja konfiguracji
+config = Config()
 
 # Instancja konfiguracji
 config = Config()
