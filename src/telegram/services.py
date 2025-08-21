@@ -131,7 +131,7 @@ async def get_telegram_messages_stats(session: AsyncSession) -> Dict[str, Any]:
 async def send_text_message(chat_id: int, text: str) -> bool:
     """Wysyła wiadomość tekstową przez Telegram Bot API."""
     try:
-        bot_token = Config.TELEGRAM_BOT_TOKEN
+        bot_token = config.TELEGRAM_BOT_TOKEN
         if not bot_token or bot_token == "your-bot-token":
             logger.error("Bot token not configured")
             return False
@@ -165,7 +165,7 @@ async def send_text_message(chat_id: int, text: str) -> bool:
 async def set_webhook(webhook_url: str) -> bool:
     """Ustawia webhook dla bota."""
     try:
-        bot_token = Config.TELEGRAM_BOT_TOKEN
+        bot_token = config.TELEGRAM_BOT_TOKEN
         if not bot_token or bot_token == "your-bot-token":
             logger.error("Bot token not configured")
             return False
@@ -195,7 +195,7 @@ async def set_webhook(webhook_url: str) -> bool:
 async def set_commands(commands: List[Dict[str, str]]) -> bool:
     """Ustawia komendy bota."""
     try:
-        bot_token = Config.TELEGRAM_BOT_TOKEN
+        bot_token = config.TELEGRAM_BOT_TOKEN
         if not bot_token or bot_token == "your-bot-token":
             logger.error("Bot token not configured")
             return False
@@ -225,7 +225,7 @@ async def set_commands(commands: List[Dict[str, str]]) -> bool:
 async def get_bot_info() -> Optional[Dict[str, Any]]:
     """Pobiera informacje o bocie."""
     try:
-        bot_token = Config.TELEGRAM_BOT_TOKEN
+        bot_token = config.TELEGRAM_BOT_TOKEN
         if not bot_token or bot_token == "your-bot-token":
             logger.error("Bot token not configured")
             return None

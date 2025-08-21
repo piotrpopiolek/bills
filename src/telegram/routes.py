@@ -137,7 +137,7 @@ async def telegram_health_check() -> dict:
         ]
         
         missing_vars = []
-        if not Config.TELEGRAM_BOT_TOKEN or Config.TELEGRAM_BOT_TOKEN == "your-bot-token":
+        if not config.TELEGRAM_BOT_TOKEN or config.TELEGRAM_BOT_TOKEN == "your-bot-token":
             missing_vars.append("TELEGRAM_BOT_TOKEN")
         
         if missing_vars:
@@ -150,7 +150,7 @@ async def telegram_health_check() -> dict:
         return {
             "status": "healthy",
             "message": "Telegram integration is configured",
-            "bot_token": f"{Config.TELEGRAM_BOT_TOKEN[:10]}..." if Config.TELEGRAM_BOT_TOKEN else None
+            "bot_token": f"{config.TELEGRAM_BOT_TOKEN[:10]}..." if config.TELEGRAM_BOT_TOKEN else None
         }
         
     except Exception as e:
