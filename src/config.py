@@ -113,7 +113,7 @@ class Config(BaseSettings):
     
     # ✅ KONFIGURACJA PYDANTIC
     class Config:
-        env_file = ".env"  # Plik .env dla development
+        env_file = "process.env"  # Plik .env dla development
         env_file_encoding = "utf-8"
         case_sensitive = False  # Railway używa UPPERCASE
         env_prefix = ""  # Brak prefiksu dla zmiennych Railway
