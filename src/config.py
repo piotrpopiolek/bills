@@ -69,9 +69,6 @@ class Config:
 # Instancja konfiguracji
 config = Config()
 
-# Instancja konfiguracji
-config = Config()
-
 # ✅ FUNKCJA WALIDACJI - sprawdza czy Railway ustawił wymagane zmienne
 def validate_railway_config():
     """Sprawdza czy wymagane zmienne Railway są ustawione."""
@@ -93,7 +90,7 @@ def validate_railway_config():
     print(f"📊 Database URL: {config.DATABASE_URL}")
     print(f"🔐 JWT Secret: {config.JWT_SECRET_KEY[:10]}...")
     print(f"🌍 Environment: {config.ENVIRONMENT}")
-    print(f"�� Port: {config.PORT}")
+    print(f"🌐 Port: {config.PORT}")
 
 # Redis URLs - z obsługą hasła
 if config.REDIS_PASSWORD:
