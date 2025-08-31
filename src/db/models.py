@@ -152,10 +152,10 @@ class TelegramMessageType(str, enum.Enum):
 class TelegramMessage(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     telegram_message_id: int = Field(
-        sa_column=Column("telegram_message_id", BigInteger, unique=True, index=True)  # BIGINT dla dużych liczb
+        sa_column=Column("telegram_message_id", BigInteger, unique=True, index=True)
     )
     chat_id: int = Field(
-        sa_column=Column("chat_id", BigInteger, index=True)  # BIGINT dla dużych chat_id
+        sa_column=Column("chat_id", BigInteger, index=True)
     )
     message_type: TelegramMessageType
     content: str
@@ -171,9 +171,16 @@ class TelegramMessage(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=func.now())
     )
     
-    user_id: int = Field(foreign_key="user.id")
+    user_id: int = Field(
+        foreign_key="user.id",
+        sa_column=Column("user_id", BigInteger)
+    )
     user: User = Relationship(back_populates="telegram_messages")
     
     # Relacja do rachunku (jeśli wiadomość zawierała zdjęcie rachunku)
-    bill_id: Optional[int] = Field(default=None, foreign_key="bill.id")
+    bill_id: Optional[int] = Field(
+        default=None, 
+        foreign_key="bill.id",
+        sa_column=Column("bill_id", BigInteger)
+    )
     bill: Optional[Bill] = Relationship(back_populates="telegram_messages")
