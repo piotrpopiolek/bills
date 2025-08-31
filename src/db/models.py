@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlmodel import Field, Relationship, SQLModel, Column, DateTime, Numeric, func, JSON
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, ForeignKey
 
 # --- Enum dla statusu przetwarzania ---
 
@@ -172,15 +172,13 @@ class TelegramMessage(SQLModel, table=True):
     )
     
     user_id: int = Field(
-        foreign_key="user.id",
-        sa_column=Column("user_id", BigInteger)
+        sa_column=Column("user_id", BigInteger, ForeignKey("user.id"))
     )
     user: User = Relationship(back_populates="telegram_messages")
     
     # Relacja do rachunku (jeśli wiadomość zawierała zdjęcie rachunku)
     bill_id: Optional[int] = Field(
         default=None, 
-        foreign_key="bill.id",
-        sa_column=Column("bill_id", BigInteger)
+        sa_column=Column("bill_id", BigInteger, ForeignKey("bill.id"))
     )
     bill: Optional[Bill] = Relationship(back_populates="telegram_messages")
