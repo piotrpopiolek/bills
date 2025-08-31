@@ -13,6 +13,13 @@ router = APIRouter()
 # Telegram Webhook Endpoint
 # =============================================================================
 
+@router.get("/webhook")
+async def webhook_test():
+    """
+    Test endpoint dla webhooka - sprawdza czy endpoint jest dostępny
+    """
+    return {"status": "ok", "message": "Webhook endpoint is working"}
+
 @router.post("/webhook")
 async def process_webhook(
     request: Request,
@@ -25,13 +32,36 @@ async def process_webhook(
     Przetwarza różne typy wiadomości (tekst, zdjęcia, dokumenty).
     """
     try:
-        # Pobierz dane z request
-        webhook_data = await request.json()
+        # Sprawdź Content-Type
+        content_type = request.headers.get("content-type", "")
+        print(f"🔍 Content-Type: {content_type}")
+        
+        # Pobierz dane z request w zależności od Content-Type
+        if "application/json" in content_type:
+            webhook_data = await request.json()
+        elif "application/x-www-form-urlencoded" in content_type:
+            # Telegram może wysyłać dane w formacie form-data
+            form_data = await request.form()
+            webhook_data = dict(form_data)
+            print(f"📝 Form data: {webhook_data}")
+        else:
+            # Spróbuj pobrać jako JSON (fallback)
+            try:
+                webhook_data = await request.json()
+            except:
+                # Jeśli nie JSON, pobierz jako tekst
+                body = await request.body()
+                print(f"📄 Raw body: {body}")
+                raise HTTPException(status_code=400, detail=f"Unsupported content type: {content_type}")
+        
+        print(f"📊 Webhook data: {webhook_data}")
         
         # Waliduj dane webhooka
         try:
             webhook = TelegramWebhook(**webhook_data)
         except Exception as e:
+            print(f"❌ Validation error: {e}")
+            print(f"📊 Data that failed validation: {webhook_data}")
             raise HTTPException(status_code=400, detail=f"Invalid webhook data: {str(e)}")
         
         # Przetwórz webhook
@@ -45,6 +75,9 @@ async def process_webhook(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Webhook processing error: {str(e)}")
 
 # =============================================================================
