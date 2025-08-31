@@ -152,13 +152,10 @@ class TelegramMessageType(str, enum.Enum):
 class TelegramMessage(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     telegram_message_id: int = Field(
-        unique=True, 
-        index=True,
-        sa_column=Column("telegram_message_id", BigInteger)  # BIGINT dla dużych liczb
+        sa_column=Column("telegram_message_id", BigInteger, unique=True, index=True)  # BIGINT dla dużych liczb
     )
     chat_id: int = Field(
-        index=True,
-        sa_column=Column("chat_id", BigInteger)  # BIGINT dla dużych chat_id
+        sa_column=Column("chat_id", BigInteger, index=True)  # BIGINT dla dużych chat_id
     )
     message_type: TelegramMessageType
     content: str
