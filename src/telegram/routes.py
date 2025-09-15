@@ -115,7 +115,6 @@ async def set_webhook(webhook_url: str) -> dict:
     """
     Ustawienie webhooka dla bota
     
-    Endpoint do konfiguracji webhooka.
     """
     try:
         success = await services.set_webhook(webhook_url)
