@@ -173,7 +173,9 @@ class TelegramMessage(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=func.now())
     )
     
-    user_id: int = Field(foreign_key="user.external_id")
+    user_id: int = Field(
+        sa_column=Column("user_id", BigInteger, ForeignKey("user.external_id"))
+    )
     user: User = Relationship(back_populates="telegram_messages")
     
     # Relacja do rachunku (jeśli wiadomość zawierała zdjęcie rachunku)
