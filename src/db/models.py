@@ -18,7 +18,9 @@ class ProcessingStatus(str, enum.Enum):
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    external_id: str = Field(unique=True, index=True)
+    external_id: int = Field(
+        sa_column=Column("external_id", BigInteger, index=True)
+    )
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
@@ -171,14 +173,9 @@ class TelegramMessage(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=func.now())
     )
     
-    user_id: int = Field(
-        sa_column=Column("user_id", BigInteger, ForeignKey("user.id"))
-    )
+    user_id: int = Field(foreign_key="user.external_id")
     user: User = Relationship(back_populates="telegram_messages")
     
     # Relacja do rachunku (jeśli wiadomość zawierała zdjęcie rachunku)
-    bill_id: Optional[int] = Field(
-        default=None, 
-        sa_column=Column("bill_id", BigInteger, ForeignKey("bill.id"))
-    )
+    bill_id: Optional[int] = Field(default=None, foreign_key="bill.id")
     bill: Optional[Bill] = Relationship(back_populates="telegram_messages")
