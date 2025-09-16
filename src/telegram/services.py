@@ -284,7 +284,7 @@ async def _process_message(session: AsyncSession, message) -> None:
             content=message.text or message.caption or '',
             file_id=None,
             status=TelegramMessageStatus.SENT,
-            user_id=user.id
+            user_id=user.external_id
         )
         
         session.add(telegram_message)
