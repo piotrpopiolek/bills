@@ -309,7 +309,7 @@ async def _process_callback_query(session: AsyncSession, callback_query) -> None
 async def _find_or_create_user(session: AsyncSession, chat_id: int) -> User:
     """Znajduje lub tworzy użytkownika na podstawie chat_id."""
     # Sprawdź czy użytkownik już istnieje
-    statement = select(User).where(User.external_id == str(chat_id))
+    statement = select(User).where(User.external_id == chat_id)
     result = await session.execute(statement)
     user = result.scalar_one_or_none()
     
@@ -318,7 +318,7 @@ async def _find_or_create_user(session: AsyncSession, chat_id: int) -> User:
     
     # Stwórz nowego użytkownika
     user = User(
-        external_id=str(chat_id),
+        external_id=chat_id,
         is_active=True
     )
     
