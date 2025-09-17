@@ -43,6 +43,20 @@ class Config:
     def TELEGRAM_WEBHOOK_URL(self) -> Optional[str]:
         return os.environ.get("TELEGRAM_WEBHOOK_URL")
     
+    # Sentry
+    @property
+    def SENTRY_DSN(self) -> Optional[str]:
+        return os.environ.get("SENTRY_DSN")
+    
+    @property
+    def SENTRY_ENVIRONMENT(self) -> str:
+        return os.environ.get("SENTRY_ENVIRONMENT", self.ENVIRONMENT)
+    
+    @property
+    def SENTRY_SAMPLE_RATE(self) -> float:
+        rate = os.environ.get("SENTRY_SAMPLE_RATE", "1.0")
+        return float(rate) if rate else 1.0
+    
     # Aplikacja - Railway ustawia PORT
     @property
     def ENVIRONMENT(self) -> str:
@@ -91,6 +105,8 @@ def validate_railway_config():
     print(f"🔐 JWT Secret: {config.JWT_SECRET_KEY[:10]}...")
     print(f"🌍 Environment: {config.ENVIRONMENT}")
     print(f"🌐 Port: {config.PORT}")
+    print(f"🚨 Sentry DSN: {'Set' if config.SENTRY_DSN else 'Not set'}")
+    print(f"🚨 Sentry Environment: {config.SENTRY_ENVIRONMENT}")
 
 # Redis URLs - z obsługą hasła
 if config.REDIS_PASSWORD:

@@ -4,6 +4,7 @@ from sqlmodel import select
 from sqlalchemy import func
 import httpx
 import logging
+import sentry_sdk
 
 from src.db.models import TelegramMessage, User, TelegramMessageStatus
 from src.telegram.schemas import TelegramWebhook, BotCommandList
@@ -270,13 +271,16 @@ async def get_file_path(file_id: str) -> Optional[str]:
                     return result["result"]["file_path"]
                 else:
                     logger.error(f"Failed to get file path: {result}")
+                    sentry_sdk.capture_message(f"Telegram API error: {result}", level="error")
                     return None
             else:
                 logger.error(f"HTTP error {response.status_code}: {response.text}")
+                sentry_sdk.capture_message(f"HTTP error {response.status_code}: {response.text}", level="error")
                 return None
                 
     except Exception as e:
         logger.error(f"Error getting file path: {str(e)}")
+        sentry_sdk.capture_exception(e)
         return None
 
 async def download_file(file_path: str, local_path: str) -> bool:
@@ -305,10 +309,12 @@ async def download_file(file_path: str, local_path: str) -> bool:
                 return True
             else:
                 logger.error(f"HTTP error {response.status_code}: {response.text}")
+                sentry_sdk.capture_message(f"File download HTTP error {response.status_code}: {response.text}", level="error")
                 return False
                 
     except Exception as e:
         logger.error(f"Error downloading file: {str(e)}")
+        sentry_sdk.capture_exception(e)
         return False
 
 # =============================================================================
@@ -330,6 +336,7 @@ async def process_webhook(session: AsyncSession, webhook_data: TelegramWebhook) 
         
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
+        sentry_sdk.capture_exception(e)
         return False
 
 async def _process_message(session: AsyncSession, message) -> None:

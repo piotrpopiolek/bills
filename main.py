@@ -3,6 +3,10 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.integrations.httpx import HttpxIntegration
 from src.bill.routes import router as router_bill
 from src.category.routes import router as router_category
 from src.db.main import init_db
@@ -11,9 +15,28 @@ from src.middleware import register_middleware
 from src.shop.routes import router as router_shop
 from src.user.routes import router as router_user
 from src.telegram.routes import router as router_telegram
+from src.config import config
 
 # Załaduj zmienne środowiskowe
 load_dotenv()
+
+# Inicjalizacja Sentry
+if config.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=config.SENTRY_DSN,
+        environment=config.SENTRY_ENVIRONMENT,
+        sample_rate=config.SENTRY_SAMPLE_RATE,
+        integrations=[
+            FastApiIntegration(auto_enabling_instrumentations=True),
+            SqlalchemyIntegration(),
+            HttpxIntegration(),
+        ],
+        traces_sample_rate=config.SENTRY_SAMPLE_RATE,
+        profiles_sample_rate=config.SENTRY_SAMPLE_RATE,
+    )
+    print("🚨 Sentry initialized successfully!")
+else:
+    print("⚠️  Sentry DSN not configured - error monitoring disabled")
 
 # Konfiguracja logowania
 logging.basicConfig(
