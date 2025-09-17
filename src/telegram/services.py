@@ -250,9 +250,71 @@ async def get_bot_info() -> Optional[Dict[str, Any]]:
         logger.error(f"Error getting bot info: {str(e)}")
         return None
 
+async def get_file_path(file_id: str) -> Optional[str]:
+    """Pobiera file_path dla danego file_id z Telegram Bot API."""
+    try:
+        bot_token = config.TELEGRAM_BOT_TOKEN
+        if not bot_token or bot_token == "your-bot-token":
+            logger.error("Bot token not configured")
+            return None
+        
+        url = f"https://api.telegram.org/bot{bot_token}/getFile"
+        payload = {"file_id": file_id}
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload)
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("ok"):
+                    return result["result"]["file_path"]
+                else:
+                    logger.error(f"Failed to get file path: {result}")
+                    return None
+            else:
+                logger.error(f"HTTP error {response.status_code}: {response.text}")
+                return None
+                
+    except Exception as e:
+        logger.error(f"Error getting file path: {str(e)}")
+        return None
+
+async def download_file(file_path: str, local_path: str) -> bool:
+    """Pobiera plik z Telegram i zapisuje lokalnie."""
+    try:
+        bot_token = config.TELEGRAM_BOT_TOKEN
+        if not bot_token or bot_token == "your-bot-token":
+            logger.error("Bot token not configured")
+            return False
+        
+        url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            
+            if response.status_code == 200:
+                # Utwórz katalog jeśli nie istnieje
+                import os
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                
+                # Zapisz plik
+                with open(local_path, 'wb') as f:
+                    f.write(response.content)
+                
+                logger.info(f"File downloaded successfully: {local_path}")
+                return True
+            else:
+                logger.error(f"HTTP error {response.status_code}: {response.text}")
+                return False
+                
+    except Exception as e:
+        logger.error(f"Error downloading file: {str(e)}")
+        return False
+
 # =============================================================================
 # Telegram Webhook Processing Services
 # =============================================================================
+
 
 async def process_webhook(session: AsyncSession, webhook_data: TelegramWebhook) -> bool:
     """Przetwarza webhook z Telegram."""
@@ -276,13 +338,31 @@ async def _process_message(session: AsyncSession, message) -> None:
         # Znajdź lub stwórz użytkownika
         user = await _find_or_create_user(session, message.chat.id)
         
+        # Określ typ wiadomości i file_id
+        message_type = 'TEXT'
+        file_id = None
+        file_path = None
+        content = message.text or message.caption or ''
+        
+        # Sprawdź czy to zdjęcie
+        if message.photo:
+            message_type = 'PHOTO'
+            # Wybierz największe zdjęcie (ostatnie w tablicy)
+            file_id = message.photo[-1].file_id
+            content = message.caption or 'Zdjęcie rachunku'
+        elif message.document:
+            message_type = 'DOCUMENT'
+            file_id = message.document.file_id
+            content = message.caption or 'Dokument'
+        
         # Zapisz wiadomość do bazy
         telegram_message = TelegramMessage(
             telegram_message_id=message.message_id,
             chat_id=message.chat.id,
-            message_type='TEXT',  # Domyślnie TEXT
-            content=message.text or message.caption or '',
-            file_id=None,
+            message_type=message_type,
+            content=content,
+            file_id=file_id,
+            file_path=file_path,  # Będzie ustawione po pobraniu pliku
             status=TelegramMessageStatus.SENT,
             user_id=user.external_id
         )
@@ -291,9 +371,11 @@ async def _process_message(session: AsyncSession, message) -> None:
         await session.commit()
         await session.refresh(telegram_message)
         
-        # Przetwórz wiadomość
+        # Przetwórz wiadomość w zależności od typu
         if message.text:
             await _process_text_message(message.chat.id, message.text)
+        elif message.photo:
+            await _process_photo_message(session, telegram_message, file_id, message.caption)
             
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
@@ -343,6 +425,7 @@ async def _process_text_message(chat_id: int, text: str) -> None:
     except Exception as e:
         logger.error(f"Error processing text message: {str(e)}")
         await _send_error_message(chat_id)
+
 
 # =============================================================================
 # Message Response Services
@@ -421,4 +504,58 @@ Przepraszamy, wystąpił problem podczas przetwarzania wiadomości.
 
 Dziękujemy za cierpliwość!
     """
-    await send_text_message(chat_id, error_text.strip()) 
+    await send_text_message(chat_id, error_text.strip())
+
+async def _process_photo_message(session: AsyncSession, telegram_message: TelegramMessage, file_id: str, caption: Optional[str] = None) -> None:
+    """Przetwarza wiadomość ze zdjęciem."""
+    try:
+        chat_id = telegram_message.chat_id
+        
+        # Wyślij potwierdzenie otrzymania zdjęcia
+        response_text = "📸 <b>Zdjęcie otrzymane!</b>\n\n"
+        if caption:
+            response_text += f"<i>Opis: {caption}</i>\n\n"
+        response_text += "🔄 Pobieram zdjęcie...\n\n"
+        response_text += "⏳ To może potrwać kilka sekund."
+        
+        await send_text_message(chat_id, response_text)
+        
+        # Pobierz file_path z Telegram API
+        file_path = await get_file_path(file_id)
+        if not file_path:
+            await send_text_message(chat_id, "❌ <b>Błąd pobierania zdjęcia</b>\n\nNie udało się pobrać informacji o pliku.")
+            return
+        
+        # Wygeneruj lokalną ścieżkę dla pliku
+        import os
+        from datetime import datetime
+        
+        # Utwórz katalog na zdjęcia
+        photos_dir = "uploads/photos"
+        os.makedirs(photos_dir, exist_ok=True)
+        
+        # Wygeneruj unikalną nazwę pliku
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_extension = os.path.splitext(file_path)[1] or '.jpg'
+        local_filename = f"photo_{chat_id}_{timestamp}{file_extension}"
+        local_path = os.path.join(photos_dir, local_filename)
+        
+        # Pobierz plik
+        success = await download_file(file_path, local_path)
+        if not success:
+            await send_text_message(chat_id, "❌ <b>Błąd pobierania zdjęcia</b>\n\nNie udało się pobrać pliku.")
+            return
+        
+        # Zaktualizuj rekord w bazie danych z file_path
+        telegram_message.file_path = local_path
+        await session.commit()
+        
+        # Wyślij potwierdzenie pobrania
+        await send_text_message(chat_id, f"✅ <b>Zdjęcie pobrane!</b>\n\n📁 Zapisano jako: <code>{local_filename}</code>\n\n🔄 Przetwarzam rachunek...")
+        
+        # TODO: Tutaj będzie logika przetwarzania rachunku
+        logger.info(f"Photo downloaded successfully: {local_path}")
+        
+    except Exception as e:
+        logger.error(f"Error processing photo message: {str(e)}")
+        await _send_error_message(chat_id) 

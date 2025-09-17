@@ -162,6 +162,7 @@ class TelegramMessage(SQLModel, table=True):
     message_type: TelegramMessageType
     content: str
     file_id: Optional[str] = Field(default=None)
+    file_path: Optional[str] = Field(default=None)  # Lokalna ścieżka do pobranego pliku
     status: TelegramMessageStatus = Field(default=TelegramMessageStatus.SENT)
     error_message: Optional[str] = Field(default=None)
     created_at: datetime = Field(
