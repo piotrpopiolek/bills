@@ -27,7 +27,7 @@ if config.SENTRY_DSN:
         environment=config.SENTRY_ENVIRONMENT,
         sample_rate=config.SENTRY_SAMPLE_RATE,
         integrations=[
-            FastApiIntegration(auto_enabling_instrumentations=True),
+            FastApiIntegration(),
             SqlalchemyIntegration(),
             HttpxIntegration(),
         ],
