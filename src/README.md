@@ -62,13 +62,13 @@ alembic history
 
 ```bash
 # Sprawdź status migracji
-railway run python scripts/railway_migrate.py current
+railway run python scripts/railway_alembic.py current
 
 # Uruchom migracje
-railway run python scripts/railway_migrate.py upgrade head
+railway run python scripts/railway_alembic.py upgrade head
 
 # Sprawdź historię migracji
-railway run python scripts/railway_migrate.py history
+railway run python scripts/railway_alembic.py history
 ```
 
 ### Automatyczne migracje
