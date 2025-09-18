@@ -1,7 +1,5 @@
 import os
 from typing import Optional
-from pydantic_settings import BaseSettings
-from pydantic import Field, validator
 
 class Config:
     """Konfiguracja aplikacji dla Railway - używamy os.environ.get()"""
