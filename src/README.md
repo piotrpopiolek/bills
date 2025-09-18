@@ -55,3 +55,28 @@ alembic revision --autogenerate -m "Description"
 alembic current
 alembic history
 ```
+
+## Railway Deployment
+
+### Uruchomienie migracji w Railway
+
+```bash
+# Sprawdź status migracji
+railway run python scripts/railway_migrate.py current
+
+# Uruchom migracje
+railway run python scripts/railway_migrate.py upgrade head
+
+# Sprawdź historię migracji
+railway run python scripts/railway_migrate.py history
+```
+
+### Automatyczne migracje
+
+Aplikacja automatycznie uruchamia migracje przy starcie. Jeśli chcesz wyłączyć to zachowanie, usuń kod z `main.py` w funkcji `lifespan`.
+
+### Testowanie migracji lokalnie
+
+```bash
+python scripts/test_migrations.py
+```

@@ -47,6 +47,15 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up...")
+    
+    # Uruchom migracje automatycznie
+    try:
+        from scripts.auto_migrate import auto_migrate
+        await auto_migrate()
+    except Exception as e:
+        print(f"⚠️  Auto-migration failed: {e}")
+        print("   Continuing without migrations...")
+    
     await init_db()
     yield
     print("Shutting down...")
