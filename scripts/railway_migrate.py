@@ -9,10 +9,11 @@ import subprocess
 from pathlib import Path
 
 # Dodaj src do ścieżki Python
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "src"))
 
 from src.config import config
-
 
 def run_alembic_command(command: list):
     """Uruchamia komendę Alembic"""
