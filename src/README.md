@@ -61,6 +61,9 @@ alembic history
 ### Uruchomienie migracji w Railway
 
 ```bash
+# Skonfiguruj Alembic w Railway
+railway run python scripts/railway_setup.py
+
 # Sprawdź status migracji
 railway run python scripts/railway_alembic.py current
 
@@ -69,6 +72,10 @@ railway run python scripts/railway_alembic.py upgrade head
 
 # Sprawdź historię migracji
 railway run python scripts/railway_alembic.py history
+
+# Ręczne uruchamianie (jeśli inne nie działają)
+railway run python scripts/railway_manual.py current
+railway run python scripts/railway_manual.py upgrade head
 ```
 
 ### Automatyczne migracje

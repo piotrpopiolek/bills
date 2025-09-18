@@ -27,6 +27,31 @@ def run_alembic_command(command: list):
     
     print(f"📊 Using DATABASE_URL: {database_url[:50]}...")
     
+    # Spróbuj najpierw bezpośrednio uruchomić alembic
+    try:
+        result = subprocess.run(
+            ["alembic"] + command,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        print("✅ Command completed successfully!")
+        if result.stdout:
+            print(result.stdout)
+        return True
+    except FileNotFoundError:
+        print("❌ Alembic not found in PATH!")
+        print("Trying python -m alembic...")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Alembic command failed: {e}")
+        if e.stderr:
+            print(f"Error: {e.stderr}")
+        if e.stdout:
+            print(f"Output: {e.stdout}")
+        print("Trying python -m alembic...")
+    
+    # Fallback: spróbuj python -m alembic
     try:
         result = subprocess.run(
             ["python", "-m", "alembic"] + command,
@@ -41,32 +66,15 @@ def run_alembic_command(command: list):
         return True
         
     except subprocess.CalledProcessError as e:
-        print(f"❌ Command failed: {e}")
+        print(f"❌ Python -m alembic failed: {e}")
         if e.stderr:
             print(f"Error: {e.stderr}")
         if e.stdout:
             print(f"Output: {e.stdout}")
         return False
     except FileNotFoundError:
-        print("❌ Python or alembic not found!")
-        print("Trying alternative approach...")
-        
-        # Spróbuj bezpośrednio uruchomić alembic
-        try:
-            result = subprocess.run(
-                ["alembic"] + command,
-                env=env,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            print("✅ Command completed successfully!")
-            if result.stdout:
-                print(result.stdout)
-            return True
-        except FileNotFoundError:
-            print("❌ Alembic not found in PATH!")
-            return False
+        print("❌ Python not found!")
+        return False
 
 
 def main():
