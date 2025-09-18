@@ -1,6 +1,6 @@
 web: uvicorn main:app --host 0.0.0.0 --port $PORT
-migrate: alembic upgrade head
-migrate-rollback: alembic downgrade -1
-migrate-status: alembic current
-migrate-history: alembic history --verbose
-migrate-rollback-remigrate: alembic downgrade -1 && alembic upgrade head
+migrate: python scripts/alembic_wrapper.py upgrade head
+migrate-rollback: python scripts/alembic_wrapper.py downgrade -1
+migrate-status: python scripts/alembic_wrapper.py current
+migrate-history: python scripts/alembic_wrapper.py history --verbose
+migrate-rollback-remigrate: python scripts/alembic_wrapper.py downgrade -1 && python scripts/alembic_wrapper.py upgrade head

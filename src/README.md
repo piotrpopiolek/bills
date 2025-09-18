@@ -61,6 +61,9 @@ alembic history
 ### Uruchomienie migracji w Railway
 
 ```bash
+# Testuj alembic w Railway
+railway run python scripts/test_alembic.py
+
 # Uruchom migracje
 railway run migrate
 
@@ -80,20 +83,20 @@ railway run migrate-history
 ### Bezpośrednie komendy alembic
 
 ```bash
-# Uruchom migracje
-railway run alembic upgrade head
+# Uruchom migracje przez wrapper
+railway run python scripts/alembic_wrapper.py upgrade head
 
-# Cofnij migrację
-railway run alembic downgrade -1
+# Cofnij migrację przez wrapper
+railway run python scripts/alembic_wrapper.py downgrade -1
 
-# Sprawdź status
-railway run alembic current
+# Sprawdź status przez wrapper
+railway run python scripts/alembic_wrapper.py current
 
-# Sprawdź historię
-railway run alembic history --verbose
+# Sprawdź historię przez wrapper
+railway run python scripts/alembic_wrapper.py history --verbose
 
-# Utwórz nową migrację
-railway run alembic revision --autogenerate -m "Add new field"
+# Utwórz nową migrację przez wrapper
+railway run python scripts/alembic_wrapper.py revision --autogenerate -m "Add new field"
 ```
 
 ### Automatyczne migracje
