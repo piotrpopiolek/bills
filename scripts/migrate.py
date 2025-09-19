@@ -8,7 +8,8 @@ import os
 from pathlib import Path
 
 # Dodaj src do ścieżki Python
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 from src.db.main import init_db
 from src.config import config
