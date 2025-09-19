@@ -23,14 +23,25 @@ if config.config_file_name is not None:
 
 # Import models from your application
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from src.db.models import SQLModel
-from src.config import config as app_config
 
-# Set the database URL from our config
-config.set_main_option("sqlalchemy.url", app_config.DATABASE_URL)
+# Try to import from src.config, fallback to environment variables
+try:
+    from src.config import config as app_config
+    database_url = app_config.DATABASE_URL
+except ImportError:
+    # Fallback to environment variables if src.config is not available
+    database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/bills")
 
-# Set target metadata
-target_metadata = SQLModel.metadata
+# Set the database URL
+config.set_main_option("sqlalchemy.url", database_url)
+
+# Import models
+try:
+    from src.db.models import SQLModel
+    target_metadata = SQLModel.metadata
+except ImportError:
+    # Fallback if models are not available
+    target_metadata = None
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
