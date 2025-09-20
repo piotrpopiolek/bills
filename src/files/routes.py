@@ -57,11 +57,11 @@ async def get_file_info(
         )
 
 
-@router.get("/{file_path:path}")
+@router.get("/{file_path:path}", response_model=None)
 async def serve_file(
     file_path: str,
     session: AsyncSession = Depends(get_session)
-) -> FileResponseSchema:
+) -> FileResponse:
     """
     Serwuje plik do pobrania.
     
@@ -153,11 +153,11 @@ async def serve_file(
         )
 
 
-@router.get("/telegram/{message_id}/file")
+@router.get("/telegram/{message_id}/file", response_model=None)
 async def get_telegram_message_file(
     message_id: int,
     session: AsyncSession = Depends(get_session)
-) -> FileResponseSchema:
+) -> FileResponse:
     """
     Pobiera plik z wiadomości Telegram.
     
@@ -225,7 +225,7 @@ async def get_telegram_message_file(
         )
 
 
-@router.get("/telegram/{message_id}/file/info", response_model=FileResponse)
+@router.get("/telegram/{message_id}/file/info", response_model=FileResponseSchema)
 async def get_telegram_message_file_info(
     message_id: int,
     session: AsyncSession = Depends(get_session)
@@ -267,11 +267,11 @@ async def get_telegram_message_file_info(
         )
 
 
-@router.get("/bill/{bill_id}/file")
+@router.get("/bill/{bill_id}/file", response_model=None)
 async def get_bill_file(
     bill_id: int,
     session: AsyncSession = Depends(get_session)
-) -> FileResponseSchema:
+) -> FileResponse:
     """
     Pobiera plik rachunku.
     
@@ -339,7 +339,7 @@ async def get_bill_file(
         )
 
 
-@router.get("/bill/{bill_id}/file/info", response_model=FileResponse)
+@router.get("/bill/{bill_id}/file/info", response_model=FileResponseSchema)
 async def get_bill_file_info(
     bill_id: int,
     session: AsyncSession = Depends(get_session)
