@@ -29,8 +29,11 @@ class FileService:
     @classmethod
     def _ensure_directories(cls) -> None:
         """Tworzy katalogi jeśli nie istnieją."""
+        print(f"🔧 Creating directories: {cls.UPLOADS_DIR}")
+        cls.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
         cls.PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
         cls.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        print(f"✅ Directories created successfully")
     
     @classmethod
     def _get_file_info(cls, file_path: str) -> Optional[FileInfo]:
