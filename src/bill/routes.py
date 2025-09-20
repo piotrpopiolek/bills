@@ -2,9 +2,12 @@ from src.bill.schemas import BillCreate, BillRead, BillUpdate, BillReadWithDetai
 from src.billitem.schemas import BillItemCreate
 from src.db.main import get_session
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import List
 from src.bill import services
+from src.files.services import FileService
+from src.files.schemas import FileResponse as FileResponseSchema
 
 router = APIRouter(prefix="/bills", tags=["Bills"])
 
@@ -57,3 +60,109 @@ async def add_items_to_bill(bill_id: int, items_in: List[BillItemCreate], sessio
     # Poniżej uproszczony przykład:
 
     return await services.add_items_to_bill(session=session, db_bill=db_bill, items_in=items_in)
+
+
+# =============================================================================
+# File Management Endpoints
+# =============================================================================
+
+@router.get("/{bill_id}/file")
+async def get_bill_file(
+    bill_id: int, 
+    session: AsyncSession = Depends(get_session)
+) -> FileResponse:
+    """
+    Pobiera plik rachunku.
+    
+    Zwraca plik (zdjęcie/dokument) powiązany z rachunkiem.
+    Plik jest pobierany z wiadomości Telegram, która została użyta do utworzenia rachunku.
+    
+    Args:
+        bill_id: ID rachunku
+        session: Sesja bazy danych
+    
+    Returns:
+        FileResponse: Plik do pobrania (zdjęcie lub dokument)
+    
+    Raises:
+        HTTPException: 404 jeśli rachunek lub plik nie istnieje
+        HTTPException: 500 w przypadku błędu serwera
+    """
+    try:
+        # Pobierz plik z rachunku
+        file_path, file_info = await FileService.get_file_by_bill(
+            session, bill_id
+        )
+        
+        if not file_path or not file_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No file associated with this bill"
+            )
+        
+        # Pobierz typ MIME
+        media_type = FileService.get_file_content_type(file_path)
+        
+        # Zwróć plik
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            filename=file_info.file_name
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting bill file: {str(e)}"
+        )
+
+
+@router.get("/{bill_id}/file/info", response_model=FileResponseSchema)
+async def get_bill_file_info(
+    bill_id: int, 
+    session: AsyncSession = Depends(get_session)
+) -> FileResponseSchema:
+    """
+    Pobiera informacje o pliku rachunku.
+    
+    Zwraca metadane pliku (nazwa, rozmiar, typ, daty) bez pobierania samego pliku.
+    Przydatne do wyświetlania informacji o pliku przed pobraniem.
+    
+    Args:
+        bill_id: ID rachunku
+        session: Sesja bazy danych
+    
+    Returns:
+        FileResponseSchema: Informacje o pliku
+    
+    Raises:
+        HTTPException: 404 jeśli rachunek lub plik nie istnieje
+        HTTPException: 500 w przypadku błędu serwera
+    """
+    try:
+        # Pobierz plik z rachunku
+        file_path, file_info = await FileService.get_file_by_bill(
+            session, bill_id
+        )
+        
+        if not file_path or not file_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No file associated with this bill"
+            )
+        
+        return FileResponseSchema(
+            status="success",
+            message="File info retrieved successfully",
+            file_info=file_info
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting bill file info: {str(e)}"
+        )

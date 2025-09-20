@@ -10,6 +10,7 @@ from sentry_sdk.integrations.httpx import HttpxIntegration
 from src.bill.routes import router as router_bill
 from src.category.routes import router as router_category
 from src.db.main import init_db
+from src.files.routes import router as router_files
 from src.index.routes import router as router_index
 from src.middleware import register_middleware
 from src.shop.routes import router as router_shop
@@ -71,6 +72,7 @@ register_middleware(app)
 
 app.include_router(router_bill, prefix=f"/api/{version}")
 app.include_router(router_category, prefix=f"/api/{version}")
+app.include_router(router_files, prefix=f"/api/{version}")
 app.include_router(router_index, prefix=f"/api/{version}")
 app.include_router(router_shop, prefix=f"/api/{version}")
 app.include_router(router_user, prefix=f"/api/{version}")

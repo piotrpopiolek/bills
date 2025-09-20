@@ -1,11 +1,14 @@
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.main import get_session
 from src.telegram import services
 from src.telegram.schemas import TelegramWebhook, BotCommand, BotCommandList
 from src.config import config
+from src.files.services import FileService
+from src.files.schemas import FileResponse as FileResponseSchema
 
 router = APIRouter()
 
@@ -527,4 +530,110 @@ async def process_bill_manual(
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing bill: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error processing bill: {str(e)}")
+
+
+# =============================================================================
+# File Management Endpoints
+# =============================================================================
+
+@router.get("/messages/{message_id}/file")
+async def get_telegram_message_file(
+    message_id: int,
+    session: AsyncSession = Depends(get_session)
+) -> FileResponse:
+    """
+    Pobiera plik z wiadomości Telegram.
+    
+    Zwraca plik (zdjęcie/dokument) powiązany z wiadomością Telegram.
+    Plik jest pobierany z lokalnego katalogu uploads.
+    
+    Args:
+        message_id: ID wiadomości Telegram w bazie danych
+        session: Sesja bazy danych
+    
+    Returns:
+        FileResponse: Plik do pobrania (zdjęcie lub dokument)
+    
+    Raises:
+        HTTPException: 404 jeśli wiadomość lub plik nie istnieje
+        HTTPException: 500 w przypadku błędu serwera
+    """
+    try:
+        # Pobierz plik z wiadomości Telegram
+        file_path, file_info = await FileService.get_file_by_telegram_message(
+            session, message_id
+        )
+        
+        if not file_path or not file_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No file associated with this message"
+            )
+        
+        # Pobierz typ MIME
+        media_type = FileService.get_file_content_type(file_path)
+        
+        # Zwróć plik
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            filename=file_info.file_name
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting telegram file: {str(e)}"
+        )
+
+
+@router.get("/messages/{message_id}/file/info", response_model=FileResponseSchema)
+async def get_telegram_message_file_info(
+    message_id: int,
+    session: AsyncSession = Depends(get_session)
+) -> FileResponseSchema:
+    """
+    Pobiera informacje o pliku z wiadomości Telegram.
+    
+    Zwraca metadane pliku (nazwa, rozmiar, typ, daty) bez pobierania samego pliku.
+    Przydatne do wyświetlania informacji o pliku przed pobraniem.
+    
+    Args:
+        message_id: ID wiadomości Telegram w bazie danych
+        session: Sesja bazy danych
+    
+    Returns:
+        FileResponseSchema: Informacje o pliku
+    
+    Raises:
+        HTTPException: 404 jeśli wiadomość lub plik nie istnieje
+        HTTPException: 500 w przypadku błędu serwera
+    """
+    try:
+        # Pobierz plik z wiadomości Telegram
+        file_path, file_info = await FileService.get_file_by_telegram_message(
+            session, message_id
+        )
+        
+        if not file_path or not file_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No file associated with this message"
+            )
+        
+        return FileResponseSchema(
+            status="success",
+            message="File info retrieved successfully",
+            file_info=file_info
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting telegram file info: {str(e)}"
+        ) 
