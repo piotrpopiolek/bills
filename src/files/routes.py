@@ -112,10 +112,15 @@ async def serve_file(
         print(f"📄 Media type: {media_type}")
         
         # Zwróć plik
+        filename = str(Path(safe_path).name)
+        print(f"📄 Filename: {filename} (type: {type(filename)})")
+        print(f"📄 Safe path: {safe_path} (type: {type(safe_path)})")
+        print(f"📄 Media type: {media_type} (type: {type(media_type)})")
+        
         return FileResponse(
-            path=safe_path,
+            path=str(safe_path),
             media_type=media_type,
-            filename=Path(safe_path).name
+            filename=filename
         )
         
     except HTTPException:

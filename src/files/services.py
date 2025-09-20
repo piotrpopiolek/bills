@@ -78,37 +78,51 @@ class FileService:
     ) -> Tuple[Optional[str], Optional[FileInfo]]:
         """Pobiera plik na podstawie wiadomości Telegram."""
         try:
+            print(f"🔍 DEBUG: Looking for Telegram message ID: {message_id}")
+            
             # Znajdź wiadomość Telegram
             stmt = select(TelegramMessage).where(TelegramMessage.id == message_id)
             result = await session.exec(stmt)
             message = result.first()
             
+            print(f"📄 Found message: {message}")
+            
             if not message:
+                print(f"❌ Message not found for ID: {message_id}")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Message not found"
                 )
             
+            print(f"📄 Message file_path: {message.file_path}")
+            
             if not message.file_path:
+                print(f"❌ No file_path in message")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="No file associated with this message"
                 )
             
             # Sprawdź czy plik istnieje
+            print(f"🔍 Getting file info for: {message.file_path}")
             file_info = cls._get_file_info(message.file_path)
+            print(f"📄 File info: {file_info}")
             
-            if not file_info.exists:
+            if not file_info or not file_info.exists:
+                print(f"❌ File does not exist: {message.file_path}")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="File not found on disk"
                 )
             
+            print(f"✅ Returning file_path: {message.file_path}, file_info: {file_info}")
             return message.file_path, file_info
             
-        except HTTPException:
+        except HTTPException as e:
+            print(f"❌ HTTPException in get_file_by_telegram_message: {e}")
             raise
         except Exception as e:
+            print(f"❌ Exception in get_file_by_telegram_message: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error getting file: {str(e)}"
