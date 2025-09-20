@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -561,6 +561,9 @@ async def get_telegram_message_file(
     """
     try:
         print(f"🔍 DEBUG: Getting file for Telegram message ID: {message_id}")
+        
+        # Upewnij się, że katalogi istnieją
+        FileService._ensure_directories()
         
         # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
         print("🔍 DEBUG: Listing all files in uploads directory...")

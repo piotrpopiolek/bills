@@ -73,6 +73,9 @@ async def serve_file(
         FileResponse: Plik do pobrania
     """
     try:
+        # Upewnij się, że katalogi istnieją
+        FileService._ensure_directories()
+        
         # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
         print("🔍 DEBUG: Listing all files in uploads directory...")
         uploads_dir = Path(FileService.UPLOADS_DIR)
@@ -142,6 +145,9 @@ async def get_telegram_message_file(
     """
     try:
         print(f"🔍 DEBUG: Getting file for Telegram message ID: {message_id}")
+        
+        # Upewnij się, że katalogi istnieją
+        FileService._ensure_directories()
         
         # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
         print("🔍 DEBUG: Listing all files in uploads directory...")
@@ -253,6 +259,9 @@ async def get_bill_file(
     """
     try:
         print(f"🔍 DEBUG: Getting file for bill ID: {bill_id}")
+        
+        # Upewnij się, że katalogi istnieją
+        FileService._ensure_directories()
         
         # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
         print("🔍 DEBUG: Listing all files in uploads directory...")
