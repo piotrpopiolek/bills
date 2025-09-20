@@ -73,18 +73,40 @@ async def serve_file(
         FileResponse: Plik do pobrania
     """
     try:
+        # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
+        print("🔍 DEBUG: Listing all files in uploads directory...")
+        uploads_dir = Path(FileService.UPLOADS_DIR)
+        if uploads_dir.exists():
+            print(f"📁 Uploads directory: {uploads_dir.absolute()}")
+            for root, dirs, files in uploads_dir.rglob("*"):
+                if files:
+                    print(f"  📂 {root}:")
+                    for file in files:
+                        file_path_full = root / file
+                        file_size = file_path_full.stat().st_size if file_path_full.exists() else 0
+                        print(f"    📄 {file} ({file_size} bytes)")
+        else:
+            print(f"❌ Uploads directory does not exist: {uploads_dir.absolute()}")
+        
+        print(f"🎯 Requested file path: {file_path}")
+        
         # Waliduj ścieżkę pliku
         safe_path = FileService.get_safe_file_path(file_path)
+        print(f"✅ Safe file path: {safe_path}")
         
         # Sprawdź czy plik istnieje
         if not Path(safe_path).exists():
+            print(f"❌ File does not exist: {safe_path}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File not found"
             )
         
+        print(f"✅ File exists: {safe_path}")
+        
         # Pobierz typ MIME
         media_type = FileService.get_file_content_type(safe_path)
+        print(f"📄 Media type: {media_type}")
         
         # Zwróć plik
         return FileResponse(
@@ -96,6 +118,7 @@ async def serve_file(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error serving file: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error serving file: {str(e)}"
@@ -118,12 +141,33 @@ async def get_telegram_message_file(
         FileResponse: Plik do pobrania
     """
     try:
+        print(f"🔍 DEBUG: Getting file for Telegram message ID: {message_id}")
+        
+        # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
+        print("🔍 DEBUG: Listing all files in uploads directory...")
+        uploads_dir = Path(FileService.UPLOADS_DIR)
+        if uploads_dir.exists():
+            print(f"📁 Uploads directory: {uploads_dir.absolute()}")
+            for root, dirs, files in uploads_dir.rglob("*"):
+                if files:
+                    print(f"  📂 {root}:")
+                    for file in files:
+                        file_path_full = root / file
+                        file_size = file_path_full.stat().st_size if file_path_full.exists() else 0
+                        print(f"    📄 {file} ({file_size} bytes)")
+        else:
+            print(f"❌ Uploads directory does not exist: {uploads_dir.absolute()}")
+        
         # Pobierz plik z wiadomości Telegram
         file_path, file_info = await FileService.get_file_by_telegram_message(
             session, message_id
         )
         
+        print(f"📄 Retrieved file path: {file_path}")
+        print(f"📄 File info: {file_info}")
+        
         if not file_path or not file_info:
+            print(f"❌ No file found for message ID: {message_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File not found"
@@ -131,6 +175,7 @@ async def get_telegram_message_file(
         
         # Pobierz typ MIME
         media_type = FileService.get_file_content_type(file_path)
+        print(f"📄 Media type: {media_type}")
         
         # Zwróć plik
         return FileResponse(
@@ -142,6 +187,7 @@ async def get_telegram_message_file(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error getting telegram file: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting telegram file: {str(e)}"
@@ -206,12 +252,33 @@ async def get_bill_file(
         FileResponse: Plik do pobrania
     """
     try:
+        print(f"🔍 DEBUG: Getting file for bill ID: {bill_id}")
+        
+        # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
+        print("🔍 DEBUG: Listing all files in uploads directory...")
+        uploads_dir = Path(FileService.UPLOADS_DIR)
+        if uploads_dir.exists():
+            print(f"📁 Uploads directory: {uploads_dir.absolute()}")
+            for root, dirs, files in uploads_dir.rglob("*"):
+                if files:
+                    print(f"  📂 {root}:")
+                    for file in files:
+                        file_path_full = root / file
+                        file_size = file_path_full.stat().st_size if file_path_full.exists() else 0
+                        print(f"    📄 {file} ({file_size} bytes)")
+        else:
+            print(f"❌ Uploads directory does not exist: {uploads_dir.absolute()}")
+        
         # Pobierz plik z rachunku
         file_path, file_info = await FileService.get_file_by_bill(
             session, bill_id
         )
         
+        print(f"📄 Retrieved file path: {file_path}")
+        print(f"📄 File info: {file_info}")
+        
         if not file_path or not file_info:
+            print(f"❌ No file found for bill ID: {bill_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File not found"
@@ -219,6 +286,7 @@ async def get_bill_file(
         
         # Pobierz typ MIME
         media_type = FileService.get_file_content_type(file_path)
+        print(f"📄 Media type: {media_type}")
         
         # Zwróć plik
         return FileResponse(
@@ -230,6 +298,7 @@ async def get_bill_file(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error getting bill file: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting bill file: {str(e)}"
