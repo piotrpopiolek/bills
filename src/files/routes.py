@@ -9,16 +9,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.db.main import get_session
 from src.files.services import FileService
-from src.files.schemas import FileInfo, FileResponse
+from src.files.schemas import FileInfo, FileResponse as FileResponseSchema
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
 
-@router.get("/info/{file_path:path}", response_model=FileResponse)
+@router.get("/info/{file_path:path}", response_model=FileResponseSchema)
 async def get_file_info(
     file_path: str,
     session: AsyncSession = Depends(get_session)
-) -> FileResponse:
+) -> FileResponseSchema:
     """
     Pobiera informacje o pliku.
     
@@ -42,7 +42,7 @@ async def get_file_info(
                 detail="File not found"
             )
         
-        return FileResponse(
+        return FileResponseSchema(
             status="success",
             message="File info retrieved successfully",
             file_info=file_info
@@ -61,7 +61,7 @@ async def get_file_info(
 async def serve_file(
     file_path: str,
     session: AsyncSession = Depends(get_session)
-) -> FileResponse:
+) -> FileResponseSchema:
     """
     Serwuje plik do pobrania.
     
@@ -72,33 +72,40 @@ async def serve_file(
     Returns:
         FileResponse: Plik do pobrania
     """
+    print(f"🔍 DEBUG: serve_file called with file_path: {file_path}")
+    
     try:
         # Upewnij się, że katalogi istnieją
+        print(f"🔧 Ensuring directories exist...")
         FileService._ensure_directories()
+        print(f"✅ Directories ensured")
         
         # DEBUG: Wyświetl wszystkie pliki w katalogu uploads
         print("🔍 DEBUG: Listing all files in uploads directory...")
         uploads_dir = Path(FileService.UPLOADS_DIR)
         if uploads_dir.exists():
             print(f"📁 Uploads directory: {uploads_dir.absolute()}")
-            for root, dirs, files in uploads_dir.rglob("*"):
-                if files:
-                    print(f"  📂 {root}:")
-                    for file in files:
-                        file_path_full = root / file
-                        file_size = file_path_full.stat().st_size if file_path_full.exists() else 0
-                        print(f"    📄 {file} ({file_size} bytes)")
+            file_count = 0
+            for root in uploads_dir.rglob("*"):
+                if root.is_file():
+                    file_count += 1
+                    file_size = root.stat().st_size if root.exists() else 0
+                    print(f"  📄 {root} ({file_size} bytes)")
+            print(f"📊 Total files found: {file_count}")
         else:
             print(f"❌ Uploads directory does not exist: {uploads_dir.absolute()}")
         
         print(f"🎯 Requested file path: {file_path}")
         
         # Waliduj ścieżkę pliku
+        print(f"🔍 Validating file path...")
         safe_path = FileService.get_safe_file_path(file_path)
-        print(f"✅ Safe file path: {safe_path}")
+        print(f"✅ Safe file path: {safe_path} (type: {type(safe_path)})")
         
         # Sprawdź czy plik istnieje
-        if not Path(safe_path).exists():
+        print(f"🔍 Checking if file exists...")
+        path_obj = Path(safe_path)
+        if not path_obj.exists():
             print(f"❌ File does not exist: {safe_path}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -108,25 +115,38 @@ async def serve_file(
         print(f"✅ File exists: {safe_path}")
         
         # Pobierz typ MIME
+        print(f"🔍 Getting MIME type...")
         media_type = FileService.get_file_content_type(safe_path)
-        print(f"📄 Media type: {media_type}")
-        
-        # Zwróć plik
-        filename = str(Path(safe_path).name)
-        print(f"📄 Filename: {filename} (type: {type(filename)})")
-        print(f"📄 Safe path: {safe_path} (type: {type(safe_path)})")
         print(f"📄 Media type: {media_type} (type: {type(media_type)})")
         
-        return FileResponse(
-            path=str(safe_path),
-            media_type=media_type,
-            filename=filename
-        )
+        # Przygotuj dane
+        filename = path_obj.name
+        print(f"📄 Filename: {filename} (type: {type(filename)})")
         
-    except HTTPException:
+        # Konwertuj wszystko na string
+        safe_path_str = str(safe_path)
+        filename_str = str(filename)
+        media_type_str = str(media_type)
+        
+        print(f"📄 Final values - path: {safe_path_str}, filename: {filename_str}, media_type: {media_type_str}")
+        
+        # Utwórz FileResponse
+        print(f"🔍 Creating FileResponse...")
+        response = FileResponse(
+            path=safe_path_str,
+            media_type=media_type_str,
+            filename=filename_str
+        )
+        print(f"✅ FileResponse created successfully: {response}")
+        return response
+        
+    except HTTPException as e:
+        print(f"❌ HTTPException in serve_file: {e}")
         raise
     except Exception as e:
-        print(f"❌ Error serving file: {str(e)}")
+        print(f"❌ Exception in serve_file: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error serving file: {str(e)}"
@@ -137,7 +157,7 @@ async def serve_file(
 async def get_telegram_message_file(
     message_id: int,
     session: AsyncSession = Depends(get_session)
-) -> FileResponse:
+) -> FileResponseSchema:
     """
     Pobiera plik z wiadomości Telegram.
     
@@ -189,7 +209,7 @@ async def get_telegram_message_file(
         print(f"📄 Media type: {media_type}")
         
         # Zwróć plik
-        return FileResponse(
+        return FileResponseSchema(
             path=file_path,
             media_type=media_type,
             filename=file_info.file_name
@@ -209,7 +229,7 @@ async def get_telegram_message_file(
 async def get_telegram_message_file_info(
     message_id: int,
     session: AsyncSession = Depends(get_session)
-) -> FileResponse:
+) -> FileResponseSchema:
     """
     Pobiera informacje o pliku z wiadomości Telegram.
     
@@ -232,7 +252,7 @@ async def get_telegram_message_file_info(
                 detail="File not found"
             )
         
-        return FileResponse(
+        return FileResponseSchema(
             status="success",
             message="File info retrieved successfully",
             file_info=file_info
@@ -251,7 +271,7 @@ async def get_telegram_message_file_info(
 async def get_bill_file(
     bill_id: int,
     session: AsyncSession = Depends(get_session)
-) -> FileResponse:
+) -> FileResponseSchema:
     """
     Pobiera plik rachunku.
     
@@ -303,7 +323,7 @@ async def get_bill_file(
         print(f"📄 Media type: {media_type}")
         
         # Zwróć plik
-        return FileResponse(
+        return FileResponseSchema(
             path=file_path,
             media_type=media_type,
             filename=file_info.file_name
@@ -323,7 +343,7 @@ async def get_bill_file(
 async def get_bill_file_info(
     bill_id: int,
     session: AsyncSession = Depends(get_session)
-) -> FileResponse:
+) -> FileResponseSchema:
     """
     Pobiera informacje o pliku rachunku.
     
@@ -346,7 +366,7 @@ async def get_bill_file_info(
                 detail="File not found"
             )
         
-        return FileResponse(
+        return FileResponseSchema(
             status="success",
             message="File info retrieved successfully",
             file_info=file_info
