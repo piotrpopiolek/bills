@@ -1,85 +1,31 @@
-import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+import os
 
-class Config:
-    """Konfiguracja aplikacji dla Railway - używamy os.environ.get()"""
+class Settings(BaseSettings):
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:1234@localhost:5432/bills"
+    JWT_SECRET_KEY: str = "dev-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
+    TELEGRAM_WEBHOOK_URL: Optional[str] = None
+    SENTRY_DSN: Optional[str] = None
+    SENTRY_ENVIRONMENT: str = "development"
+    SENTRY_SAMPLE_RATE: float = 0.1
+    ENVIRONMENT: str = "development"
+    SECRET_KEY: str = "dev-app-secret-key-change-in-production"
+    DEBUG: bool = True
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
 
-    # Baza danych - Railway automatycznie ustawia DATABASE_URL
-    @property
-    def DATABASE_URL(self) -> str:
-        return os.environ.get("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/bills")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
     
-    # JWT
-    @property
-    def JWT_SECRET_KEY(self) -> str:
-        return os.environ.get("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
-    
-    @property
-    def JWT_ALGORITHM(self) -> str:
-        return os.environ.get("JWT_ALGORITHM", "HS256")
-    
-    # Redis - Railway ustawia te zmienne
-    @property
-    def REDIS_HOST(self) -> str:
-        return os.environ.get("REDIS_HOST", "localhost")
-    
-    @property
-    def REDIS_PORT(self) -> int:
-        port = os.environ.get("REDIS_PORT", "6379")
-        return int(port) if port else 6379
-    
-    @property
-    def REDIS_PASSWORD(self) -> Optional[str]:
-        return os.environ.get("REDIS_PASSWORD")
-    
-    # Telegram
-    @property
-    def TELEGRAM_BOT_TOKEN(self) -> Optional[str]:
-        return os.environ.get("TELEGRAM_BOT_TOKEN")
-    
-    @property
-    def TELEGRAM_WEBHOOK_URL(self) -> Optional[str]:
-        return os.environ.get("TELEGRAM_WEBHOOK_URL")
-    
-    # Sentry
-    @property
-    def SENTRY_DSN(self) -> Optional[str]:
-        return os.environ.get("SENTRY_DSN")
-    
-    @property
-    def SENTRY_ENVIRONMENT(self) -> str:
-        return os.environ.get("SENTRY_ENVIRONMENT", self.ENVIRONMENT)
-    
-    @property
-    def SENTRY_SAMPLE_RATE(self) -> float:
-        rate = os.environ.get("SENTRY_SAMPLE_RATE", "1.0")
-        return float(rate) if rate else 1.0
-    
-    # Aplikacja - Railway ustawia PORT
-    @property
-    def ENVIRONMENT(self) -> str:
-        return os.environ.get("ENVIRONMENT", "development")
-    
-    @property
-    def SECRET_KEY(self) -> str:
-        return os.environ.get("SECRET_KEY", "dev-app-secret-key-change-in-production")
-    
-    @property
-    def DEBUG(self) -> bool:
-        debug = os.environ.get("DEBUG", "true")
-        return debug.lower() in ('true', '1', 'yes', 'on')
-    
-    @property
-    def HOST(self) -> str:
-        return os.environ.get("HOST", "0.0.0.0")
-    
-    @property
-    def PORT(self) -> int:
-        port = os.environ.get("PORT", "8000")
-        return int(port) if port else 8000
-
-# Instancja konfiguracji
-config = Config()
+config = Settings()
 
 # ✅ FUNKCJA WALIDACJI - sprawdza czy Railway ustawił wymagane zmienne
 def validate_railway_config():

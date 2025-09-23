@@ -18,44 +18,44 @@ from src.config import config
 async def auto_migrate():
     """Automatycznie uruchamia migracje przy starcie"""
     print("🔄 Auto-migrating database...")
-    
+
     # Ustaw zmienne środowiskowe
     env = os.environ.copy()
     env["DATABASE_URL"] = config.DATABASE_URL
-    
+
     try:
         # Sprawdź status migracji
         result = subprocess.run(
-            ["python", "-m", "alembic", "current"],
+            [sys.executable, "scripts/alembic_wrapper.py", "current"],
             env=env,
             capture_output=True,
             text=True,
             check=True
         )
-        
+
         print(f"📊 Current migration status: {result.stdout.strip()}")
-        
+
         # Uruchom migracje
         result = subprocess.run(
-            ["python", "-m", "alembic", "upgrade", "head"],
+            [sys.executable, "scripts/alembic_wrapper.py", "upgrade", "head"],
             env=env,
             capture_output=True,
             text=True,
             check=True
         )
-        
+
         print("✅ Database migrations completed successfully!")
         if result.stdout:
             print(result.stdout)
-        
+
         return True
-        
+
     except subprocess.CalledProcessError as e:
         print(f"❌ Migration failed: {e}")
-        if e.stderr:
-            print(f"Error: {e.stderr}")
-        if e.stdout:
-            print(f"Output: {e.stdout}")
+        print("------ Alembic STDOUT ------")
+        print(e.stdout)
+        print("------ Alembic STDERR ------")
+        print(e.stderr)
         return False
 
 

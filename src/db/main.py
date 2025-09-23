@@ -5,8 +5,6 @@ from src.config import config
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-print(config.DATABASE_URL)
-
 engine = create_async_engine(
     config.DATABASE_URL,
     echo=True # Set to True for debugging, False for production

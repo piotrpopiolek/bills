@@ -1,15 +1,23 @@
-import asyncio
-import os
-import sys
+from alembic import context
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
+from sqlmodel import SQLModel
+from src.config import config
+from src.db.models import *
+import asyncio
+
+database_url = config.DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+config.set_main_option(
+    "sqlalchemy.url",
+    database_url,
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -20,28 +28,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-
-# Import models from your application
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-# Try to import from src.config, fallback to environment variables
-try:
-    from src.config import config as app_config
-    database_url = app_config.DATABASE_URL
-except ImportError:
-    # Fallback to environment variables if src.config is not available
-    database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/bills")
-
-# Set the database URL
-config.set_main_option("sqlalchemy.url", database_url)
-
-# Import models
-try:
-    from src.db.models import SQLModel
-    target_metadata = SQLModel.metadata
-except ImportError:
-    # Fallback if models are not available
-    target_metadata = None
+target_metadata = SQLModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -108,4 +95,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-
