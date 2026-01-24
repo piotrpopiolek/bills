@@ -50,20 +50,23 @@ export const BillStatusBadge: React.FC<BillStatusBadgeProps> = ({ status }) => {
       </Badge>
     );
   }
+
+  const variant = config.variant || 'outline';
+  const label = config.label || status;
   
   // For completed status, we need a custom green variant
   // Since Badge doesn't have a success variant by default, we'll use outline with custom styling
   if (status === 'completed') {
     return (
       <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
-        {config.label}
+        {label}
       </Badge>
     );
   }
   
   return (
-    <Badge variant={config.variant}>
-      {config.label}
+    <Badge variant={variant as any}>
+      {label}
     </Badge>
   );
 };
