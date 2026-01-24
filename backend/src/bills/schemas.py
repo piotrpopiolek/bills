@@ -65,9 +65,9 @@ class BillBase(AppBaseModel, BillValidationMixin):
         description="Processing status (default: pending)"
     )
     
-    bill_date: datetime = Field(
-        ...,
-        description="Bill date (required)"
+    bill_date: Optional[datetime] = Field(
+        None,
+        description="Bill date extracted from receipt via OCR (optional, set during processing)"
     )
     
     total_amount: Optional[Decimal] = Field(

@@ -158,11 +158,12 @@ class BillsProcessorService:
             )
 
             # Step 9: Update Bill with final data
+            # Use date extracted from OCR if available, otherwise keep None
             await self._update_bill_completed(
                 bill_id,
                 total_amount=ocr_data.total_amount,
                 shop_id=shop_id,
-                bill_date=ocr_data.date or bill.bill_date,
+                bill_date=ocr_data.date,  # Use OCR date if extracted, None otherwise
                 status=final_status
             )
 
@@ -491,10 +492,13 @@ class BillsProcessorService:
         bill_id: int,
         total_amount: Decimal,
         shop_id: Optional[int],
-        bill_date: datetime,
+        bill_date: Optional[datetime],
         status: ProcessingStatus = ProcessingStatus.COMPLETED  # ← Now accepts TO_VERIFY too
     ) -> None:
-        """Update Bill with final data and set status to COMPLETED or TO_VERIFY."""
+        """Update Bill with final data and set status to COMPLETED or TO_VERIFY.
+        
+        bill_date: Date extracted from receipt via OCR (None if not extracted)
+        """
         bill = await self._get_bill(bill_id)
 
         update_data = BillUpdate(

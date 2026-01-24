@@ -556,10 +556,10 @@ async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYP
                 # 4. Create Bill record
                 # TODO: Implement Transactional Outbox here for SAGA pattern
                 # Instead of just creating bill, we should also emit 'RECEIPT_UPLOADED' event
-                bill_date = update.message.date or datetime.now(timezone.utc)
+                # bill_date will be set during OCR processing from the receipt data
                 
                 bill = await bill_service.create(BillCreate(
-                    bill_date=bill_date,
+                    bill_date=None,  # Will be extracted from receipt via OCR
                     user_id=user_id,
                     image_url=image_url, # We store the internal storage path here
                     image_hash=image_hash,
