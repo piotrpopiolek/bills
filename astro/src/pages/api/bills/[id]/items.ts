@@ -84,7 +84,8 @@ export const GET: APIRoute = async ({ params, url, cookies }) => {
 
   // Use environment variable for backend URL
   // Ensure HTTPS to prevent Mixed Content errors
-  const BACKEND_URL = import.meta.env.BACKEND_URL;
+  // Use process.env for SSR runtime (Railway compatibility)
+  const BACKEND_URL = process.env.BACKEND_URL;
   if (!BACKEND_URL) {
     return new Response(
       JSON.stringify({
