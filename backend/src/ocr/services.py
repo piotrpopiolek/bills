@@ -1,6 +1,7 @@
 import json
 import logging
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
 
@@ -184,7 +185,11 @@ class OCRService:
 
 Your task is to extract the following information:
 1. Shop name and address in strict order: "Shop name, ul. Example Street 123, 00-000 Example City"
-2. Purchase date and time in format: 16.12.2025 12:00
+2. Purchase date and time: Extract the date and time exactly as shown on the receipt. 
+   - Preferred format: ISO 8601 (YYYY-MM-DDTHH:MM:SS) or YYYY-MM-DD HH:MM
+   - Alternative formats accepted: DD/MM/YYYY HH:MM, DD.MM.YYYY HH:MM
+   - If only date is available, use YYYY-MM-DD format
+   - If date/time is not found or unclear, set to null
 3. List of all purchased items with:
    - Product name (exactly as written on receipt)
    - Quantity (default 1.0 if not specified)
@@ -290,6 +295,92 @@ Rules:
             for item in schema:
                 self._resolve_refs(item, defs)
 
+    def _parse_date(self, date_str: str) -> Optional[datetime]:
+        """
+        Parsuje datę z różnych formatów używanych przez LLM.
+        
+        Obsługiwane formaty:
+        - ISO 8601: 2026-01-09T19:19:00, 2026-01-09T19:19:00Z, 2026-01-09T19:19:00+00:00
+        - DD/MM/YYYY HH:MM: 09/01/2026 19:19
+        - DD.MM.YYYY HH:MM: 09.01.2026 19:19
+        - DD-MM-YYYY HH:MM: 09-01-2026 19:19
+        - YYYY-MM-DD HH:MM: 2026-01-09 19:19
+        
+        Returns:
+            datetime object lub None jeśli parsowanie się nie powiodło
+        """
+        if not date_str or not date_str.strip():
+            return None
+        
+        date_str = date_str.strip()
+        
+        # Próba 1: ISO 8601 format (najczęstszy)
+        try:
+            # Obsługa 'Z' na końcu (UTC)
+            if date_str.endswith('Z'):
+                date_str = date_str.replace('Z', '+00:00')
+            return datetime.fromisoformat(date_str)
+        except ValueError:
+            pass
+        
+        # Próba 2: DD/MM/YYYY HH:MM lub DD.MM.YYYY HH:MM lub DD-MM-YYYY HH:MM
+        # Wzorzec: DD/MM/YYYY HH:MM lub DD.MM.YYYY HH:MM lub DD-MM-YYYY HH:MM
+        patterns = [
+            (r'(\d{2})[/.-](\d{2})[/.-](\d{4})\s+(\d{1,2}):(\d{2})', 'DD/MM/YYYY HH:MM'),
+            (r'(\d{4})[/.-](\d{2})[/.-](\d{2})\s+(\d{1,2}):(\d{2})', 'YYYY-MM-DD HH:MM'),
+        ]
+        
+        for pattern, format_name in patterns:
+            match = re.match(pattern, date_str)
+            if match:
+                try:
+                    if format_name == 'DD/MM/YYYY HH:MM':
+                        day, month, year, hour, minute = match.groups()
+                    else:  # YYYY-MM-DD HH:MM
+                        year, month, day, hour, minute = match.groups()
+                    
+                    return datetime(
+                        year=int(year),
+                        month=int(month),
+                        day=int(day),
+                        hour=int(hour),
+                        minute=int(minute),
+                        tzinfo=timezone.utc
+                    )
+                except (ValueError, TypeError) as e:
+                    logger.debug(f"Failed to parse date with pattern {pattern}: {e}")
+                    continue
+        
+        # Próba 3: Tylko data bez czasu (różne formaty)
+        date_only_patterns = [
+            (r'(\d{2})[/.-](\d{2})[/.-](\d{4})', 'DD/MM/YYYY'),
+            (r'(\d{4})[/.-](\d{2})[/.-](\d{2})', 'YYYY-MM-DD'),
+        ]
+        
+        for pattern, format_name in date_only_patterns:
+            match = re.match(pattern, date_str)
+            if match:
+                try:
+                    if format_name == 'DD/MM/YYYY':
+                        day, month, year = match.groups()
+                    else:  # YYYY-MM-DD
+                        year, month, day = match.groups()
+                    
+                    return datetime(
+                        year=int(year),
+                        month=int(month),
+                        day=int(day),
+                        hour=0,
+                        minute=0,
+                        tzinfo=timezone.utc
+                    )
+                except (ValueError, TypeError) as e:
+                    logger.debug(f"Failed to parse date-only with pattern {pattern}: {e}")
+                    continue
+        
+        logger.warning(f"Failed to parse date in any known format: {date_str}")
+        return None
+
     def _parse_response(self, llm_response: LLMReceiptExtraction) -> OCRReceiptData:
         """
         Konwertuje LLMReceiptExtraction na OCRReceiptData.
@@ -307,16 +398,12 @@ Rules:
             for item in llm_response.items
         ]
 
-        # Parsowanie daty z ISO 8601 string
+        # Parsowanie daty z różnych formatów
         date = None
         if llm_response.date:
-            try:
-                # Obsługa różnych formatów daty
-                date_str = llm_response.date.replace('Z', '+00:00')
-                date = datetime.fromisoformat(date_str)
-            except ValueError:
-                logger.warning(f"Failed to parse date: {llm_response.date}")
-                date = None
+            date = self._parse_date(llm_response.date)
+            if date is None:
+                logger.warning(f"Failed to parse date from LLM response: {llm_response.date}")
 
         return OCRReceiptData(
             shop_name=llm_response.shop_name,

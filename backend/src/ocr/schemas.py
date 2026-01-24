@@ -122,7 +122,7 @@ class LLMReceiptExtraction(AppBaseModel):
 
     shop_name: Optional[str] = None
     shop_address: Optional[str] = None
-    date: Optional[str] = None  # Format ISO 8601
+    date: Optional[str] = None  # Date in ISO 8601 (preferred) or formats like DD/MM/YYYY HH:MM, DD.MM.YYYY HH:MM
     total_amount: float
     items: List[LLMReceiptItem]
     currency: str = "PLN"
