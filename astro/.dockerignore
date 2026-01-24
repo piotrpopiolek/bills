@@ -61,6 +61,3 @@ vitest.config.ts
 # Development files
 *.local
 
-# API routes - not needed in production (nginx proxies to backend)
-src/pages/api/
-
