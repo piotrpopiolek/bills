@@ -1,8 +1,9 @@
 import { defineMiddleware } from 'astro:middleware';
 
-import { supabaseClient } from '../db/supabase.client.ts';
-
 export const onRequest = defineMiddleware((context, next) => {
-  context.locals.supabase = supabaseClient;
+  // Middleware is currently empty but can be used for:
+  // - Request logging
+  // - Setting custom headers
+  // - Request/response transformation
   return next();
 });
