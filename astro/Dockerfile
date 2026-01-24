@@ -1,4 +1,4 @@
-# Build stage - Node.js environment for building Astro application
+# Build stage - Node.js environment for building Astro SSR application
 FROM node:20-alpine AS builder
 
 ARG NODE_ENV=production
@@ -14,96 +14,36 @@ RUN npm ci --only=production=false && \
 # Copy application source code
 COPY astro/ .
 
-# Prepare for static build
-# Remove API routes (not needed for static build)
-RUN rm -rf src/pages/api && \
-    # Disable middleware that uses Supabase (not needed for static build)
-    mkdir -p src/middleware && \
-    echo "import { defineMiddleware } from 'astro:middleware';" > src/middleware/index.ts && \
-    echo "export const onRequest = defineMiddleware((context, next) => next());" >> src/middleware/index.ts && \
-    # Fix tw-animate-css import
-    if [ -f "src/styles/global.css" ]; then \
-      if [ -d "node_modules/tw-animate-css" ]; then \
-        if [ -f "node_modules/tw-animate-css/index.css" ]; then \
-          sed -i 's|@import "tw-animate-css";|@import "../node_modules/tw-animate-css/index.css";|' src/styles/global.css; \
-        elif [ -f "node_modules/tw-animate-css/dist/index.css" ]; then \
-          sed -i 's|@import "tw-animate-css";|@import "../node_modules/tw-animate-css/dist/index.css";|' src/styles/global.css; \
-        else \
-          sed -i 's|@import "tw-animate-css";|/* @import "tw-animate-css"; */|' src/styles/global.css; \
-        fi; \
-      else \
-        sed -i 's|@import "tw-animate-css";|/* @import "tw-animate-css"; */|' src/styles/global.css; \
-      fi; \
-    fi
-
-# Fix bills/[id].astro if it exists (change prerender to true for static build)
-RUN if [ -f "src/pages/bills/[id].astro" ]; then \
-      sed -i 's/export const prerender = false;/export const prerender = true;/' "src/pages/bills/[id].astro" && \
-      awk '/export const prerender = true;/ { print; print "export async function getStaticPaths() { return []; }"; next }1' "src/pages/bills/[id].astro" > "src/pages/bills/[id].astro.tmp" && \
-      mv "src/pages/bills/[id].astro.tmp" "src/pages/bills/[id].astro"; \
-    fi
-
-# Build Astro application
+# Build Astro application (SSR)
 ARG PUBLIC_SITE_URL
 ENV PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
 RUN npm run build
 
-# Runtime stage - nginx for serving static files
-FROM nginx:1.27-alpine
+# Runtime stage - Node.js SSR server
+FROM node:20-alpine AS runtime
 
-# Install gettext for envsubst and wget for healthcheck
-RUN apk add --no-cache gettext wget
-
-# Create non-root user
-RUN addgroup -g 1001 -S nginx-user && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx nginx-user
-
+ENV NODE_ENV=production
 WORKDIR /app
 
-# Configure nginx to run as non-root user
-# Remove user directive and set pid file to /tmp (writable by non-root user)
-RUN sed -i '/^user/d' /etc/nginx/nginx.conf && \
-    sed -i 's|pid /var/run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf && \
-    sed -i 's|pid /run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf && \
-    # If pid directive doesn't exist, add it
-    grep -q "pid " /etc/nginx/nginx.conf || sed -i '/^http {/a\    pid /tmp/nginx.pid;' /etc/nginx/nginx.conf
+# Install production dependencies
+COPY astro/package.json astro/package-lock.json ./
+RUN npm ci --omit=dev && \
+    npm cache clean --force
 
-# Create nginx template directory
-RUN mkdir -p /etc/nginx/templates
-
-# Copy nginx configuration template and entrypoint script
-COPY --from=builder /app/nginx.conf /etc/nginx/templates/default.conf.template
-COPY --from=builder /app/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Copy built static files
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Set ownership and create necessary directories
-RUN mkdir -p /tmp /run && \
-    chown -R nginx-user:nginx-user /usr/share/nginx/html && \
-    chown -R nginx-user:nginx-user /var/cache/nginx && \
-    chown -R nginx-user:nginx-user /var/log/nginx && \
-    chown -R nginx-user:nginx-user /etc/nginx/conf.d && \
-    chown -R nginx-user:nginx-user /tmp && \
-    chown -R nginx-user:nginx-user /run && \
-    chown -R nginx-user:nginx-user /etc/nginx/templates && \
-    chown nginx-user:nginx-user /etc/nginx/nginx.conf && \
-    chmod 664 /etc/nginx/nginx.conf
-
-# Switch to non-root user
-USER nginx-user
+# Copy built server output
+COPY --from=builder /app/dist ./dist
 
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --spider --quiet "http://localhost:${PORT:-8080}/health" || exit 1
-
-# Set environment variables
+# Runtime environment
+ENV HOST=0.0.0.0
 ENV PORT=8080
 ENV BACKEND_URL=http://backend:8000
 
-# Use entrypoint script
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+# Health check (uses built-in fetch in Node 20)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "fetch('http://localhost:' + (process.env.PORT || 8080) + '/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# Run Astro SSR server
+CMD ["node", "./dist/server/entry.mjs"]
