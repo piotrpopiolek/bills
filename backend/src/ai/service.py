@@ -12,7 +12,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from src.config import settings
 from src.ai.schemas import NormalizedItem
 from src.ai.exceptions import CategorizationError
-from src.ai.ollama_client import OllamaClient
 from src.common.exceptions import ResourceNotFoundError
 from src.ocr.schemas import OCRItem
 from src.product_indexes.models import ProductIndex
@@ -78,15 +77,9 @@ class AICategorizationService:
         self.product_index_service = product_index_service
         self.alias_service = alias_service
         self.category_service = category_service
-        self.provider = (settings.AI_PROVIDER or settings.OCR_PROVIDER).lower()
-        self.ollama_client = OllamaClient(timeout=float(settings.OLLAMA_TIMEOUT))
-        self.gemini_model = None
-
-        if self.provider == "gemini":
-            if not settings.GEMINI_API_KEY:
-                raise CategorizationError("GEMINI_API_KEY is required when AI_PROVIDER=gemini")
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL)
+        
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self.gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     def _preprocess_text(self, raw_text: str) -> str:
         """
@@ -372,28 +365,21 @@ Zwróć odpowiedź w formacie JSON:
 }}"""
 
         try:
-            if self.provider == "ollama":
-                parsed_data = await self.ollama_client.chat_json(
-                    model=settings.OLLAMA_TEXT_MODEL,
-                    prompt=prompt,
-                    format_schema="json",
+            
+            response = await self.gemini_model.generate_content_async(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    response_mime_type="application/json",
                     temperature=settings.AI_CATEGORIZATION_TEMPERATURE,
                 )
-            else:
-                response = await self.gemini_model.generate_content_async(
-                    prompt,
-                    generation_config=genai.GenerationConfig(
-                        response_mime_type="application/json",
-                        temperature=settings.AI_CATEGORIZATION_TEMPERATURE,
-                    )
-                )
+            )
 
-                if not response.text:
-                    logger.warning("Gemini zwróciło pustą odpowiedź dla kategoryzacji")
-                    return None
+            if not response.text:
+                logger.warning("Gemini zwróciło pustą odpowiedź dla kategoryzacji")
+                return None
 
-                parsed_data = json.loads(response.text)
-
+            # Parsowanie JSON response
+            parsed_data = json.loads(response.text)
             category_name = parsed_data.get("category_name")
             confidence = parsed_data.get("confidence", 0.0)
             reasoning = parsed_data.get("reasoning", "")
