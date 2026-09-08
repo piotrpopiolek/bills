@@ -44,6 +44,9 @@ async def lifespan(app: FastAPI):
     await asyncio.sleep(0.5)
     # Register bot commands after full initialization
     await TelegramBotService.register_commands()
+    # Locally Telegram cannot reach localhost — use long polling when no webhook URL is set
+    if TelegramBotService.should_use_polling():
+        await TelegramBotService.start_polling()
     yield
     # Shutdown: Stop Telegram Bot
     await TelegramBotService.shutdown()

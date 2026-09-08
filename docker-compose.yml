@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: bills-backend
+    ports:
+      - '8000:8000'
+    environment:
+      - PORT=8000
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@db:5432/postgres}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - ENV=development
+    depends_on:
+      - db
+    networks:
+      - bills-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: astro/Dockerfile
+    container_name: bills-frontend
+    ports:
+      - '8080:8080'
+    environment:
+      - PORT=8080
+      - BACKEND_URL=http://backend:8000
+      - PUBLIC_SITE_URL=http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - bills-network
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--spider', '--quiet', 'http://localhost:8080/health']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  db:
+    image: postgres:16-alpine
+    container_name: bills-db
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bills-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  bills-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

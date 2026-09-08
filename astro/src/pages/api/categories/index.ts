@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import type { CategoryListResponse, ApiResponse } from '@/types';
+import { getBackendUrl } from '@/lib/utils/backend-url';
 
 // Mark this route as dynamic (not prerendered)
 export const prerender = false;
@@ -58,11 +59,11 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   queryParams.append('skip', skip.toString());
   queryParams.append('limit', limit.toString());
 
-  // Use environment variable for backend URL
-  // Ensure HTTPS to prevent Mixed Content errors
-  // Use process.env for SSR runtime (Railway compatibility)
-  const BACKEND_URL = process.env.BACKEND_URL;
-  if (!BACKEND_URL) {
+  let secureBackendUrl: string;
+  try {
+    secureBackendUrl = getBackendUrl();
+  } catch {
+    console.error('BACKEND_URL is not set in environment variables');
     return new Response(
       JSON.stringify({
         success: false,
@@ -74,11 +75,6 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       }
     );
   }
-  
-  // Ensure HTTPS for Railway public domains
-  const secureBackendUrl = BACKEND_URL.startsWith('http://') 
-    ? BACKEND_URL.replace('http://', 'https://')
-    : BACKEND_URL;
   const API_URL = `${secureBackendUrl}/api/categories`;
 
   console.log(`Proxying request to: ${API_URL}?${queryParams.toString()}`);

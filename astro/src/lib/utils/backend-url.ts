@@ -1,22 +1,44 @@
 /**
- * Ensures BACKEND_URL uses HTTPS to prevent Mixed Content errors
- * Railway public domains should always use HTTPS
+ * Resolve backend base URL for Astro SSR API proxies.
+ * Prefer process.env (Railway), fall back to import.meta.env (astro dev).
+ * Keep http for localhost; force https for public/production hosts.
  */
-export function ensureHttpsBackendUrl(backendUrl: string | undefined): string {
-  if (!backendUrl) {
+export function getBackendUrl(): string {
+  const raw =
+    process.env.BACKEND_URL ||
+    (typeof import.meta !== 'undefined'
+      ? (import.meta.env.BACKEND_URL as string | undefined)
+      : undefined);
+
+  if (!raw?.trim()) {
     throw new Error('BACKEND_URL is not set');
   }
 
-  // If URL starts with http://, replace with https://
+  const backendUrl = raw.trim().replace(/\/$/, '');
+
+  const isLocal =
+    backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1');
+
+  if (isLocal) {
+    return backendUrl;
+  }
+
   if (backendUrl.startsWith('http://')) {
     return backendUrl.replace('http://', 'https://');
   }
 
-  // If URL doesn't have a protocol, assume https://
-  if (!backendUrl.startsWith('http://') && !backendUrl.startsWith('https://')) {
+  if (!backendUrl.startsWith('https://')) {
     return `https://${backendUrl}`;
   }
 
   return backendUrl;
 }
 
+/** @deprecated Prefer getBackendUrl() */
+export function ensureHttpsBackendUrl(backendUrl: string | undefined): string {
+  if (!backendUrl?.trim()) {
+    throw new Error('BACKEND_URL is not set');
+  }
+  process.env.BACKEND_URL = backendUrl.trim();
+  return getBackendUrl();
+}

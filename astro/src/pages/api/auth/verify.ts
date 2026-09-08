@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import type { TokenResponse } from '@/lib/services/auth';
+import { getBackendUrl } from '@/lib/utils/backend-url';
 
 // Mark this route as dynamic (not prerendered)
 export const prerender = false;
@@ -21,12 +22,10 @@ export const GET: APIRoute = async ({ request }) => {
     );
   }
 
-  // Use environment variable for backend URL
-  // Ensure HTTPS to prevent Mixed Content errors
-  // Use process.env for SSR runtime (Railway compatibility)
-  const BACKEND_URL = process.env.BACKEND_URL;
-  
-  if (!BACKEND_URL) {
+  let backendUrl: string;
+  try {
+    backendUrl = getBackendUrl();
+  } catch {
     console.error('BACKEND_URL is not set in environment variables');
     return new Response(
       JSON.stringify({
@@ -40,11 +39,7 @@ export const GET: APIRoute = async ({ request }) => {
     );
   }
 
-  // Ensure HTTPS for Railway public domains
-  const secureBackendUrl = BACKEND_URL.startsWith('http://') 
-    ? BACKEND_URL.replace('http://', 'https://')
-    : BACKEND_URL;
-  const API_URL = `${secureBackendUrl}/api/auth/verify?token=${encodeURIComponent(token)}`;
+  const API_URL = `${backendUrl}/api/auth/verify?token=${encodeURIComponent(token)}`;
 
   console.log(`Proxying request to: ${API_URL}`);
 
