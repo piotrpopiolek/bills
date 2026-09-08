@@ -21,13 +21,21 @@ class Settings(BaseSettings):
     TELEGRAM_WEBHOOK_URL: str | None = None
     TELEGRAM_WEBHOOK_SECRET: str | None = None
     
-    # OpenAI
-    OPENAI_API_KEY: str
-    OPENAI_MODEL: str = "gpt-4o"  # Domyślny model
-    OPENAI_TIMEOUT: int = 30  # Timeout w sekundach
-    GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.5-flash"  # Domyślny model
-    GEMINI_TIMEOUT: int = 30  # Timeout w sekundach
+    # OpenAI / Gemini (optional when using Ollama locally)
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o"
+    OPENAI_TIMEOUT: int = 30
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_TIMEOUT: int = 30
+
+    # LLM providers: gemini | ollama
+    OCR_PROVIDER: str = "gemini"
+    AI_PROVIDER: str | None = None  # defaults to OCR_PROVIDER when unset
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_VISION_MODEL: str = "llama3.2-vision"
+    OLLAMA_TEXT_MODEL: str = "llama3.2"
+    OLLAMA_TIMEOUT: int = 180
     
     # JWT Authentication
     JWT_SECRET_KEY: str
@@ -40,19 +48,19 @@ class Settings(BaseSettings):
     WEB_APP_URL: str = "bills-ai.up.railway.app"
     
     # Freemium Limits
-    MONTHLY_BILLS_LIMIT: int = 100  # Free tier limit per month
+    MONTHLY_BILLS_LIMIT: int = 100
     
     # AI Categorization Service
-    AI_SIMILARITY_THRESHOLD: float = 0.75  # Threshold dla fuzzy search (zwiększony z 0.6)
-    AI_MIN_WORD_LENGTH_STRICT: int = 5  # Dla słów krótszych niż 5, wymagany wyższy threshold
-    AI_STRICT_THRESHOLD: float = 0.9  # Threshold dla krótkich słów
-    AI_FALLBACK_CATEGORY_NAME: str = "Inne"  # Nazwa kategorii fallback
-    AI_CATEGORIZATION_CONFIDENCE_THRESHOLD: float = 0.8  # Minimalna pewność AI (0.0-1.0)
-    AI_CATEGORIZATION_TEMPERATURE: float = 0.3  # Temperatura dla Gemini (niższa = bardziej deterministyczne)
+    AI_SIMILARITY_THRESHOLD: float = 0.75
+    AI_MIN_WORD_LENGTH_STRICT: int = 5
+    AI_STRICT_THRESHOLD: float = 0.9
+    AI_FALLBACK_CATEGORY_NAME: str = "Inne"
+    AI_CATEGORIZATION_CONFIDENCE_THRESHOLD: float = 0.8
+    AI_CATEGORIZATION_TEMPERATURE: float = 0.3
     
     # Product Learning Service
-    PRODUCT_INDEX_ACCEPTANCE_THRESHOLD: int = 3  # Liczba wymaganych potwierdzeń użytkowników dla utworzenia ProductIndex
-    FUZZY_MATCH_GROUPING_THRESHOLD: float = 0.85  # Próg podobieństwa dla grupowania nazw w product_candidates
+    PRODUCT_INDEX_ACCEPTANCE_THRESHOLD: int = 3
+    FUZZY_MATCH_GROUPING_THRESHOLD: float = 0.85
     
     model_config = {
         "env_file": ".env",

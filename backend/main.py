@@ -21,6 +21,8 @@ from src.ocr.routes import router as ocr_router
 from src.reports.routes import router as reports_router
 from src.error_handler import exception_handler
 
+# Settings (incl. OCR_PROVIDER) load from .env at import — restart/reload after .env changes
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

@@ -2,25 +2,17 @@ import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile
-import google.generativeai as genai
 
 from src.deps import CurrentUser
 from src.middleware.rate_limit import check_ocr_rate_limit
 from src.ocr.schemas import OCRExtractResponse
 from src.ocr.services import OCRService
-from src.config import settings
 
 router = APIRouter(prefix="/ocr", tags=["OCR"])
 
 
 async def get_ocr_service() -> OCRService:
-    # Konfiguracja Gemini API (globalna dla biblioteki, ale bezpieczna w tym kontekście)
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    
-    # Inicjalizacja modelu
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    
-    return OCRService(model=model)
+    return OCRService()
 
 
 OCRServiceDependency = Annotated[OCRService, Depends(get_ocr_service)]
@@ -29,7 +21,7 @@ OCRServiceDependency = Annotated[OCRService, Depends(get_ocr_service)]
 @router.post("/extract",response_model=OCRExtractResponse,dependencies=[Depends(check_ocr_rate_limit)])
 async def extract_receipt_data(file: UploadFile = File(..., description="Receipt image (JPEG, PNG, WEBP)"),current_user: CurrentUser = ...,ocr_service: OCRServiceDependency = ...,) -> OCRExtractResponse:
     """
-    Extract structured data from a receipt image using AI (Gemini).
+    Extract structured data from a receipt image using AI (Gemini or Ollama).
     
     **MVP Note:** This endpoint is primarily for development/testing.
     In production, Telegram Bot calls OCRService directly.
@@ -52,7 +44,6 @@ async def extract_receipt_data(file: UploadFile = File(..., description="Receipt
     """
     start_time = time.perf_counter()
     
-    # Wyjątki domenowe propagują się do globalnego exception handlera
     result = await ocr_service.extract_data(file)
     
     execution_time = time.perf_counter() - start_time
@@ -61,6 +52,6 @@ async def extract_receipt_data(file: UploadFile = File(..., description="Receipt
         success=True,
         message="Ekstrakcja zakończona pomyślnie",
         data=result,
-        raw_text=None,  # Opcjonalnie: można dodać surowy tekst w przyszłości
+        raw_text=None,
         execution_time=execution_time
     )
