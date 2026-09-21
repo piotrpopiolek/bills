@@ -104,19 +104,13 @@ The authentication tests (`auth.spec.ts`) test the magic link authentication flo
    };
    ```
 
-3. **Generate magic link token:**
+3. **Get a magic link token:**
 
-   ```bash
-   # Via API (example)
-   curl -X POST http://localhost:8000/api/v1/auth/magic-link \
-     -H "Content-Type: application/json" \
-     -d '{"telegram_user_id": 123456789}'
-   ```
+   Public `POST /auth/magic-link` does not exist. Ask the bot for `/login` and copy the `token` query parameter, or set `TEST_MAGIC_LINK_TOKEN`.
 
-4. **Extract token from response:**
-   - The response contains a `magic_link` URL
-   - Extract the `token` query parameter from the URL
-   - Use this token in your tests
+4. **Use the token in tests:**
+   - Pass it as `TEST_MAGIC_LINK_TOKEN`
+   - Tests skip when neither the bot token nor the env var is available
 
 ### Updating Tests with Real Tokens
 

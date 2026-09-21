@@ -37,7 +37,7 @@ backend/src/auth/
 
 ## 🔄 Workflow
 
-### 1. Generowanie Magic Link (Telegram Bot → API)
+### 1. Generowanie Magic Link (komenda /login w bocie)
 
 ```
 ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
@@ -47,8 +47,8 @@ backend/src/auth/
 │             │         │             │         │   Links)    │
 └─────────────┘         └─────────────┘         └─────────────┘
       │                       │                       │
-      │ POST /auth/magic-link │                       │
-      │ {telegram_user_id}    │                       │
+      │ /login (in-process)   │                       │
+      │ AuthService           │                       │
       │──────────────────────>│                       │
       │                       │                       │
       │                       │ Check user exists     │
@@ -135,32 +135,9 @@ backend/src/auth/
 
 ## 🌐 API Endpoints
 
-### `POST /api/v1/auth/magic-link`
+### Magic link
 
-Generuje magic link dla użytkownika.
-
-**Request:**
-
-```json
-{
-  "telegram_user_id": 123456789,
-  "redirect_url": "https://app.bills.com/dashboard"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "magic_link": "https://app.bills.com/auth/verify?token=abc123...",
-  "expires_at": "2024-01-01T12:30:00Z",
-  "sent_to_telegram": true
-}
-```
-
-**Errors:**
-
-- `404 Not Found`: User z telegram_user_id nie istnieje
+Nie ma publicznego `POST /auth/magic-link`. Link logowania tworzy wyłącznie komenda `/login` w bocie (`AuthService.create_magic_link_for_user`) i wysyła go w prywatnej wiadomości. Endpoint HTTP, który przyjmował `telegram_user_id` i zwracał URL, pozwalał przejąć konto.
 
 ---
 

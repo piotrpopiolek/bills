@@ -49,13 +49,14 @@ COPY supabase /supabase
 
 # Copy and make prestart.sh executable
 COPY backend/prestart.sh /prestart.sh
-RUN chmod +x /prestart.sh
+RUN sed -i 's/\r$//' /prestart.sh && chmod +x /prestart.sh
 
 # Expose port 8000
 EXPOSE 8000
 
-# Create entrypoint script that runs migrations then starts the app
-RUN echo '#!/bin/bash\nset -e\n/prestart.sh\nexec uvicorn main:app --host 0.0.0.0 --port 8000' > /entrypoint.sh && \
+# Create entrypoint script that runs migrations then starts the app.
+# python:3.11-slim has /bin/sh, not bash.
+RUN printf '%s\n' '#!/bin/sh' 'set -e' '/prestart.sh' 'exec uvicorn main:app --host 0.0.0.0 --port 8000' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 # Use entrypoint script

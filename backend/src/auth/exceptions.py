@@ -69,8 +69,7 @@ class UserNotFoundError(AuthError):
     """
     Raised when user with given Telegram ID does not exist in database.
     
-    Used by:
-    - routes.py: create_magic_link() when telegram_user_id not found
+    Reserved for lookups by Telegram ID. Login links are not issued over HTTP.
     """
     def __init__(self, telegram_user_id: int):
         super().__init__(f"Użytkownik z Telegram ID {telegram_user_id} nie został znaleziony.")

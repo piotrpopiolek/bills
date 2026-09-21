@@ -3,11 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.exceptions import UserNotFoundError, InvalidTokenError
+from src.auth.exceptions import InvalidTokenError
 from src.auth.jwt import verify_refresh_token
 from src.auth.schemas import (
-    MagicLinkCreateRequest,
-    MagicLinkResponse,
     TokenResponse,
     TokenRefreshRequest,
     UserResponse,
@@ -27,56 +25,9 @@ async def get_auth_service(session: Annotated[AsyncSession, Depends(get_session)
 
 ServiceDependency = Annotated[AuthService, Depends(get_auth_service)]
 
-@router.post("/magic-link", response_model=MagicLinkResponse, status_code=status.HTTP_200_OK, summary="Generate magic link for passwordless authentication",
-    description="""
-    Generate a magic link for passwordless authentication via Telegram.
-    
-    **Flow:**
-    1. Telegram bot calls this endpoint with user's telegram_user_id
-    2. System looks up internal user_id from telegram_user_id
-    3. System generates unique token and magic link URL
-    4. Bot sends link to user via Telegram private message
-    5. User clicks link to authenticate in web app
-    
-    **Security:**
-    - Token is single-use only
-    - Expires in 30 minutes (configurable)
-    - Securely generated using secrets.token_urlsafe
-    """
-)
-async def create_magic_link(data: MagicLinkCreateRequest, service: ServiceDependency) -> MagicLinkResponse:
-    """
-    Create a magic link for user authentication.
-    
-    This endpoint maps telegram_user_id to internal user_id,
-    then delegates to service layer.
-    
-    Args:
-        data: Request containing telegram_user_id and optional redirect_url
-        service: AuthService dependency
-        
-    Returns:
-        MagicLinkResponse with full URL and expiration
-        
-    Raises:
-        404: User with telegram_user_id not found
-    """
-    # Map telegram_user_id to internal user_id (Presentation Layer responsibility)
-    user = await service.get_user_by_telegram_id(data.telegram_user_id)
-    if not user:
-        raise UserNotFoundError(data.telegram_user_id)
-    
-    # Delegate to service layer with internal user_id
-    magic_link, full_url = await service.create_magic_link_for_user(
-        user_id=user.id,
-        redirect_url=data.redirect_url
-    )
-    
-    return MagicLinkResponse(
-        magic_link=full_url,
-        expires_at=magic_link.expires_at,
-        sent_to_telegram=True
-    )
+# Login URLs are created only inside the Telegram /login handler
+# (AuthService.create_magic_link_for_user). Do not expose an HTTP endpoint
+# that accepts telegram_user_id and returns the URL — that is account takeover.
 
 @router.get("/verify", response_model=TokenResponse, status_code=status.HTTP_200_OK, summary="Verify magic link and authenticate user",
     description="""

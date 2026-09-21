@@ -2,7 +2,7 @@
  * Test data and fixtures for E2E tests
  * 
  * This module provides utilities for:
- * 1. Generating magic link tokens via backend API
+ * 1. Loading a magic link token issued by the Telegram /login command
  * 2. Managing test user data
  * 3. Extracting tokens from URLs
  * 
@@ -80,9 +80,7 @@ export async function checkBackendAvailability(): Promise<boolean> {
     // Try to access a simple endpoint (health check or similar)
     // For now, we'll just try to connect
     const response = await fetch(`${backendUrl}/auth/magic-link`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_user_id: 0 }), // Invalid request, but will tell us if server is up
+      method: 'GET',
     });
     // Any response (even 404) means server is up
     return true;
@@ -92,89 +90,18 @@ export async function checkBackendAvailability(): Promise<boolean> {
 }
 
 /**
- * Helper to generate a test magic link token via backend API
- * 
- * @param telegramUserId - Telegram user ID (external_id) of the test user
- * @param redirectUrl - Optional redirect URL after authentication
- * @returns Magic link token extracted from the generated URL
- * 
- * @throws Error if:
- * - Backend is not accessible
- * - User with telegram_user_id does not exist (404)
- * - API returns an error
- * - Token cannot be extracted from magic link URL
- * 
- * @example
- * ```typescript
- * const token = await generateTestMagicLink(123456789);
- * await authPage.gotoVerify(token);
- * ```
+ * Magic links are not minted over HTTP.
+ * Callers should use TEST_MAGIC_LINK_TOKEN from the Telegram /login command.
+ * This function always fails so tests skip instead of calling a public issuer.
  */
 export async function generateTestMagicLink(
-  telegramUserId: number,
-  redirectUrl?: string
+  _telegramUserId: number,
+  _redirectUrl?: string
 ): Promise<string> {
-  const backendUrl = getBackendUrl();
-  const apiUrl = `${backendUrl}/auth/magic-link`;
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        telegram_user_id: telegramUserId,
-        redirect_url: redirectUrl,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage: string;
-
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.detail || errorData.message || `HTTP ${response.status}`;
-      } catch {
-        errorMessage = errorText || `HTTP ${response.status}`;
-      }
-
-      if (response.status === 404) {
-        throw new Error(
-          `User with telegram_user_id ${telegramUserId} not found. ` +
-          `Make sure the test user exists in the database. ` +
-          `Original error: ${errorMessage}`
-        );
-      }
-
-      throw new Error(
-        `Failed to generate magic link: ${errorMessage} (HTTP ${response.status})`
-      );
-    }
-
-    const data = await response.json();
-
-    // Validate response structure
-    if (!data.magic_link) {
-      throw new Error(
-        `Invalid API response: missing 'magic_link' field. ` +
-        `Response: ${JSON.stringify(data)}`
-      );
-    }
-
-    // Extract token from magic link URL
-    return extractTokenFromUrl(data.magic_link);
-  } catch (error) {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error(
-        `Cannot connect to backend API at ${apiUrl}. ` +
-        `Make sure the backend is running. ` +
-        `Original error: ${error.message}`
-      );
-    }
-    throw error;
-  }
+  throw new Error(
+    "Login links are issued only by the Telegram /login command. " +
+      "Set TEST_MAGIC_LINK_TOKEN to a token from that flow."
+  );
 }
 
 /**
