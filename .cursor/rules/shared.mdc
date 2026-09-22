@@ -4,7 +4,7 @@ alwaysApply: true
 
 # AI Rules for Bills
 
-Bills is an application for automatic personal expense tracking that uses a Telegram bot as the main interface. Users send receipt photos, and the system automatically reads items using OCR (PaddlePaddle), categorizes them using AI (OpenAI), and saves them to a database. The application operates on a freemium model with a monthly limit of 100 receipts and additionally offers a simple "read-only" web application for visualizing expense summaries. The goal is to automate the process of tracking daily expenses with minimal user effort.
+Bills is an application for automatic personal expense tracking that uses a Telegram bot as the main interface. Users send receipt photos, and the system automatically reads items using OCR (Gemini), categorizes them, and saves them to a database. The application operates on a freemium model with a monthly limit of 100 receipts and additionally offers a simple "read-only" web application for visualizing expense summaries. The goal is to automate the process of tracking daily expenses with minimal user effort.
 
 ## Tech Stack
 
@@ -13,7 +13,7 @@ Bills is an application for automatic personal expense tracking that uses a Tele
 - React 19
 - Tailwind 4
 - Shadcn/ui
-- PaddlePaddle
+- Gemini
 - FastApi
 - Supabase
 

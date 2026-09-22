@@ -41,8 +41,7 @@ For full product details, see the PRD:
   - sentry-sdk (logging/monitoring)
   - Supabase (PostgreSQL database, Storage, Auth, migrations)
 - Data & AI:
-  - **OCR (MVP):** Google Gemini API (Gemini 1.5 Flash) - LLM-based extraction
-  - **OCR (Post-MVP):** PaddlePaddle-OCR (planned for future improvements)
+  - **OCR:** Google Gemini API
   - OpenAI API (categorization & normalization)
 - Frontend:
   - Astro 5 (static site generation, routing)
