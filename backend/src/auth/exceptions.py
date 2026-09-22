@@ -34,7 +34,7 @@ class TokenExpiredError(AuthError):
     Used by:
     - services.py: verify_magic_link() when magic link expires_at < now
 
-    Note: JWT token expiration is handled by jose library and raises InvalidTokenError.
+    Note: JWT token expiration is handled by PyJWT and raises InvalidTokenError.
     """
 
     def __init__(self, expires_at: datetime | None = None):

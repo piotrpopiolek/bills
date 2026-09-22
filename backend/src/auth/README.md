@@ -32,7 +32,7 @@ backend/src/auth/
 - **FastAPI**: Framework webowy
 - **SQLAlchemy**: ORM (async)
 - **Pydantic**: Walidacja danych
-- **python-jose**: JWT encoding/decoding
+- **PyJWT**: JWT encoding/decoding
 - **secrets**: Bezpieczne generowanie tokenów
 
 ## 🔄 Workflow

@@ -27,12 +27,13 @@ def normalize(line: str) -> str | None:
 
 def load_baseline() -> set[str]:
     if not BASELINE.exists():
-        return set()
-    return {
-        line.strip()
-        for line in BASELINE.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.startswith("#")
-    }
+        raise FileNotFoundError(f"Missing {BASELINE.name}. Regenerate it from mypy src.")
+    allowed: set[str] = set()
+    for line in BASELINE.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip().replace("\\", "/")
+        if stripped and not stripped.startswith("#"):
+            allowed.add(stripped)
+    return allowed
 
 
 def main() -> int:
