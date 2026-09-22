@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Get base URL without port (fixes Railway issue where port 8080 appears in URLs)
+ * Get base URL without an internal port such as 8080.
  */
 export function getBaseUrl(): string {
   if (typeof window !== 'undefined') {

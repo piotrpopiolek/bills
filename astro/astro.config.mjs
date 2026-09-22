@@ -9,11 +9,8 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   // SSR output for dynamic routes like /bills/[id]
   output: 'server',
-  // Base path - empty for root domain, Railway handles routing
   base: '/',
-  // Site URL - Railway will set this via environment variable
-  // For production, this should be your Railway domain without port
-  // Only set site if PUBLIC_SITE_URL is provided (Astro requires valid URL or undefined)
+  // PUBLIC_SITE_URL sets Astro.site when provided.
   ...(process.env.PUBLIC_SITE_URL && { site: process.env.PUBLIC_SITE_URL }),
   integrations: [react()],
   adapter: node({

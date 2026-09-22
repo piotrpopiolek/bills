@@ -27,7 +27,9 @@ def normalize(line: str) -> str | None:
 
 def load_baseline() -> set[str]:
     if not BASELINE.exists():
-        raise FileNotFoundError(f"Missing {BASELINE.name}. Regenerate it from mypy src.")
+        raise FileNotFoundError(
+            f"Missing {BASELINE.name}. Regenerate it from mypy src."
+        )
     allowed: set[str] = set()
     for line in BASELINE.read_text(encoding="utf-8").splitlines():
         stripped = line.strip().replace("\\", "/")

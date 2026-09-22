@@ -13,12 +13,12 @@ Plaintext
 [ ] Pliki .dockerignore: Stwórz osobny .dockerignore w folderze backend/ i astro/, aby nie kopiować do kontenerów śmieci (np. node_modules, .venv, .git, **pycache**).
 
 Faza 1: Konteneryzacja (Docker)
-Railway uwielbia Dockera. To Twoja gwarancja, że "działa u mnie" = "działa na produkcji".
+Kontener ma być taki sam lokalnie i na produkcji.
 
 1.1. Backend (FastAPI)
 [ ] Stwórz backend/Dockerfile:
 
-Baza: python:3.11-slim.
+Baza: python:3.13-slim.
 
 Ustaw WORKDIR /app.
 
@@ -30,7 +30,7 @@ Uruchomienie: CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ✅ **JUŻ ZAIMPLEMENTOWANE**: Projekt już używa webhooków (TelegramBotService.process_webhook_update). Webhook jest dostępny pod endpointem `/api/v1/webhooks/telegram`. W produkcji upewnij się, że:
 
-- TELEGRAM_WEBHOOK_URL jest ustawione na publiczny URL backendu (np. https://backend-production.up.railway.app/api/v1/webhooks/telegram)
+- TELEGRAM_WEBHOOK_URL jest ustawione na publiczny URL backendu (np. https://api.example.com/api/webhooks/telegram)
 - TELEGRAM_WEBHOOK_SECRET jest ustawione dla bezpieczeństwa
 - Webhook jest zarejestrowany w Telegramie (można to zrobić przez API lub dashboard Telegram)
 
@@ -45,7 +45,7 @@ Obsługuje pliki statyczne (root /usr/share/nginx/html).
 
 Obsługuje routing SPA (try_files $uri $uri/ /index.html).
 
-Proxy do backendu: Przekierowuje location /api/ do serwisu backendu wewnątrz sieci Railway.
+Proxy do backendu: Przekierowuje location /api/ do serwisu backendu w sieci wewnętrznej.
 
 [ ] Stwórz astro/Dockerfile (Multi-stage):
 
@@ -75,42 +75,6 @@ Opcje wdrożenia migracji:
 
 Przygotuj skrypt (np. w backend/prestart.sh), który uruchamia migracje przed startem aplikacji. Dzięki temu baza zaktualizuje się sama przy każdym wdrożeniu nowej wersji.
 
-Faza 3: Infrastruktura (Railway)
-[ ] Inicjalizacja Projektu:
-
-Utwórz "Empty Project" w Railway.
-
-[ ] Serwis Backend:
-
-Dodaj serwis z repozytorium GitHub.
-
-Ważne: W ustawieniach (Settings) ustaw Root Directory na /backend.
-
-W sekcji Variables dodaj wszystkie wymagane zmienne środowiskowe:
-
-- **Database**: DATABASE_URL (z Supabase Connection Pooler, port 6543)
-- **Telegram**: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_URL, TELEGRAM_WEBHOOK_SECRET
-- **AI Services**: OPENAI_API_KEY, GEMINI_API_KEY
-- **Supabase**: SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET
-- **JWT**: JWT_SECRET_KEY
-- **App**: ENV=production, PORT=8000, WEB_APP_URL (URL frontendu)
-- **Opcjonalne**: Wszystkie pozostałe zmienne z backend/src/config.py (z domyślnymi wartościami jeśli mają)
-
-[ ] Serwis Frontend:
-
-Dodaj serwis z repozytorium GitHub.
-
-Ważne: W ustawieniach ustaw Root Directory na /astro.
-
-W sekcji Variables dodaj:
-
-- BACKEND_URL (adres wewnętrzny serwisu backendu, np. http://backend-production.up.railway.app lub http://backend:8000 jeśli używasz Private Networking)
-- **Uwaga**: Sprawdź czy frontend potrzebuje dodatkowych zmiennych środowiskowych (np. Supabase URL/Key dla klienta)
-
-[ ] Public Domain:
-
-Wygeneruj domenę publiczną (np. moj-projekt.up.railway.app) tylko dla serwisu Frontend. Backend powinien być schowany i dostępny tylko przez Nginx (chyba że potrzebujesz publicznego Webhooka dla Telegrama – wtedy wystaw też backend, ale zabezpiecz inne endpointy).
-
 Faza 4: CI/CD (GitHub Actions)
 Automatyzacja testów i wdrożeń z uwzględnieniem Monorepo.
 
@@ -121,11 +85,9 @@ Automatyzacja testów i wdrożeń z uwzględnieniem Monorepo.
 
 test: Instalacja Pythona, pip install, pytest (mockowanie API OpenAI i Telegrama).
 
-- Użyj working-directory: ./backend (podobnie jak w istniejącym pull-request.yml)
+- Użyj working-directory: ./backend (podobnie jak w istniejącym workflow CI)
 
-deploy: Użyj railwayapp/cli-action (lub deploy automatyczny przez trigger w dashboardzie Railway – dla side projectu trigger w dashboardzie jest prostszy i wystarczający, o ile testy przejdą).
-
-**Uwaga**: Istnieje już `.github/workflows/pull-request.yml` z lintowaniem. Rozważ rozszerzenie go o testy lub utworzenie osobnych workflow dla deploy.
+**Uwaga**: CI jest w `.github/workflows/ci.yml`. Deploy zostaw poza tym workflow, dopóki nie ma wybranego hostingu.
 
 4.2. Pipeline Frontend (.github/workflows/frontend.yml)
 [ ] Trigger: Push do main/master, filtr paths: ['astro/**'].
@@ -157,14 +119,10 @@ Zainstaluj SDK Sentry w FastAPI oraz w React/Astro. To absolutna podstawa, żeby
 - `/health` - podstawowy healthcheck
 - `/health/db` - healthcheck z testem połączenia do bazy
 
-W konfiguracji Railway (Settings -> Deploy -> Healthcheck Path) ustaw `/health`. Jeśli aplikacja się zawiesi, Railway sam ją zrestartuje.
-
-[ ] Budżet:
-
-Side projecty lubią generować koszty przez pomyłkę. Ustaw "Spending Limit" w Railway na kwotę, którą akceptujesz (np. 5 USD), aby uniknąć niespodzianek.
+Ustaw healthcheck hostingu na `/health`.
 
 Podsumowanie Strategii
-Monorepo: Rozdzielasz logikę buildów za pomocą Root Directory w Railway.
+Monorepo: backend i frontend budują się osobnymi Dockerfile.
 
 Architektura: Nginx (Frontend) jest twoją tarczą i routerem. Ukrywa Backend przed światem (za wyjątkiem webhooków).
 

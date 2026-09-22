@@ -1,6 +1,6 @@
 ### **Backend**
 
-- **Język:** Python 3.11+
+- **Język:** Python 3.13
 - **Framework:** FastAPI
 - **Serwer ASGI:** Uvicorn
 - **ORM:** SQLAlchemy

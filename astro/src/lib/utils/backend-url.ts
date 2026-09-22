@@ -1,6 +1,6 @@
 /**
  * Resolve backend base URL for Astro SSR API proxies.
- * Prefer process.env (Railway), fall back to import.meta.env (astro dev).
+ * Prefer process.env, fall back to import.meta.env (astro dev).
  * Keep http for localhost; force https for public/production hosts.
  */
 export function getBackendUrl(): string {

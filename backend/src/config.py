@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     MAGIC_LINK_EXPIRE_MINUTES: int = 30
 
     # Frontend
-    WEB_APP_URL: str = "bills-ai.up.railway.app"
+    WEB_APP_URL: str = "http://localhost:4321"
 
     # Freemium Limits
     MONTHLY_BILLS_LIMIT: int = 100  # Free tier limit per month

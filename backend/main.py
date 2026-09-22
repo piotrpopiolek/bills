@@ -65,7 +65,7 @@ else:
     # Ensure WEB_APP_URL has protocol for CORS
     web_app_url = settings.WEB_APP_URL
     if not web_app_url.startswith(('http://', 'https://')):
-        # Default to https:// for production (Railway uses HTTPS)
+        # Default to https:// when the URL has no scheme.
         web_app_url = f"https://{web_app_url}"
     origins = [web_app_url]  # Production domain
 

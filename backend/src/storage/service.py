@@ -111,7 +111,7 @@ class StorageService:
             # This requires static mounting in main.py
             base_url = settings.WEB_APP_URL
             if not base_url.startswith(("http://", "https://")):
-                # Default to https:// for production (Railway uses HTTPS)
+                # Default to https:// when the URL has no scheme.
                 base_url = f"https://{base_url}"
             return f"{base_url}/uploads/bills/{file_path}"
 

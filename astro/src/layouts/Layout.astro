@@ -12,11 +12,10 @@ import { ClientRouter } from 'astro:transitions';
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<title>Bills - Zarządzanie wydatkami</title>
-		{/* Fix for Railway: set base URL without port */}
+		{/* Keep generated URLs free of an internal port such as 8080. */}
 		<script is:inline define:vars={{ siteUrl: Astro.site?.href || '' }}>
-			// Store correct base URL without port for Railway
-			// Railway may forward requests with internal port (8080) in Host header
-			// This script ensures URLs are generated without port
+			// The proxy may forward Host with an internal port (8080).
+			// Store a base URL without that port.
 			(function() {
 				// Priority 1: Use PUBLIC_SITE_URL from Astro config (set via env var)
 				if (siteUrl) {

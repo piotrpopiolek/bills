@@ -1,5 +1,0 @@
-# Ignore root package.json to prevent Railway from detecting Node.js
-# We want to use Dockerfile instead
-package.json
-package-lock.json
-
