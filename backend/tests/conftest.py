@@ -1,30 +1,32 @@
 """
 Pytest configuration and shared fixtures for backend tests.
 """
-import pytest
-from typing import AsyncGenerator
+
+from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import StaticPool
+from main import app
 from sqlalchemy import JSON
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
+from src.auth.models import MagicLink  # noqa: F401
+from src.bill_items.models import BillItem  # noqa: F401
+from src.bills.models import Bill  # noqa: F401
+from src.categories.models import Category  # noqa: F401
 from src.config import Settings
-from src.db.main import get_session, Base
-from main import app
+from src.db.main import Base, get_session
+from src.product_index_aliases.models import ProductIndexAlias  # noqa: F401
+from src.product_indexes.models import ProductIndex  # noqa: F401
+from src.shops.models import Shop  # noqa: F401
+from src.telegram_messages.models import TelegramMessage  # noqa: F401
 
 # Import all models to ensure they are registered with Base
 # This ensures Base.metadata contains all table definitions
 from src.users.models import User  # noqa: F401
-from src.auth.models import MagicLink  # noqa: F401
-from src.categories.models import Category  # noqa: F401
-from src.shops.models import Shop  # noqa: F401
-from src.bills.models import Bill  # noqa: F401
-from src.bill_items.models import BillItem  # noqa: F401
-from src.product_indexes.models import ProductIndex  # noqa: F401
-from src.product_index_aliases.models import ProductIndexAlias  # noqa: F401
-from src.telegram_messages.models import TelegramMessage  # noqa: F401
 
 
 @pytest.fixture
@@ -58,7 +60,7 @@ def _convert_jsonb_to_json_for_sqlite(metadata):
 
 
 @pytest.fixture
-async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def test_db_session() -> AsyncGenerator[AsyncSession]:
     """
     Create a test database session with in-memory SQLite database.
     Uses StaticPool for synchronous access in async context.
@@ -66,44 +68,45 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     # Convert JSONB to JSON for SQLite compatibility
     _convert_jsonb_to_json_for_sqlite(Base.metadata)
-    
+
     # Use in-memory SQLite for testing
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     async_session_maker = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
-    
+
     async with async_session_maker() as session:
         yield session
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     await engine.dispose()
 
 
 @pytest.fixture
-async def client(test_db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(test_db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     """
     Create a test client for FastAPI application.
     Overrides database dependency with test session.
     """
+
     async def override_get_session():
         yield test_db_session
-    
+
     app.dependency_overrides[get_session] = override_get_session
-    
+
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
-    
+
     app.dependency_overrides.clear()
 
 
@@ -114,7 +117,7 @@ def mock_telegram_service(monkeypatch: pytest.MonkeyPatch):
     mock_application = AsyncMock()
     mock_service.get_application = AsyncMock(return_value=mock_application)
     mock_service.shutdown = AsyncMock()
-    
+
     monkeypatch.setattr("src.telegram.services.TelegramBotService", mock_service)
     return mock_service
 
@@ -133,4 +136,3 @@ def mock_supabase_client(monkeypatch: pytest.MonkeyPatch):
     mock_client = MagicMock()
     monkeypatch.setattr("supabase.create_client", lambda **kwargs: mock_client)
     return mock_client
-

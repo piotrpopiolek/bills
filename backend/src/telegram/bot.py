@@ -1,27 +1,34 @@
 import logging
-from typing import Any, Union
+from typing import Any
 
 from sqlalchemy import select
-from telegram import Bot, Message
-from telegram.ext import ExtBot
 
 from src.telegram.context import get_db_session
+from src.telegram_messages.services import (
+    TelegramLoggingService,
+    TelegramMessageService,
+)
 from src.users.models import User
-from src.telegram_messages.services import TelegramLoggingService, TelegramMessageService
+from telegram import Message
+from telegram.ext import ExtBot
 
 logger = logging.getLogger(__name__)
 
-class LoggingBot(ExtBot): # Inherit from ExtBot which is used by Application
+
+class LoggingBot(ExtBot):  # Inherit from ExtBot which is used by Application
     """
     Custom Bot class that automatically logs outgoing messages.
     """
+
     async def _log_message(self, message: Message, chat_id: int):
         """
         Log outgoing message to database using the current session.
         """
         session = get_db_session()
         if not session:
-            logger.warning("No DB session found for logging outgoing message. Skipping.")
+            logger.warning(
+                "No DB session found for logging outgoing message. Skipping."
+            )
             return
 
         try:
@@ -32,34 +39,35 @@ class LoggingBot(ExtBot): # Inherit from ExtBot which is used by Application
             user = result.scalars().first()
 
             if not user:
-                 logger.warning(f"User with external_id {chat_id} not found. Cannot log outgoing message.")
-                 return
+                logger.warning(
+                    f"User with external_id {chat_id} not found. Cannot log outgoing message."
+                )
+                return
 
             service = TelegramLoggingService(TelegramMessageService(session))
             await service.log_outgoing_message(message, user.id)
-            
-        except Exception as e:
-             logger.error(f"Failed to log outgoing message: {e}", exc_info=True)
 
+        except Exception as e:
+            logger.error(f"Failed to log outgoing message: {e}", exc_info=True)
 
     async def send_message(
         self,
-        chat_id: Union[int, str],
+        chat_id: int | str,
         text: str,
         *args: Any,
         **kwargs: Any,
     ) -> Message:
         message = await super().send_message(chat_id, text, *args, **kwargs)
-        
-        if isinstance(chat_id, int): 
-             # Fire and forget logging to avoid blocking? 
-             # For now, await it to ensure consistency, it's fast DB insert.
-             await self._log_message(message, chat_id)
+
+        if isinstance(chat_id, int):
+            # Fire and forget logging to avoid blocking?
+            # For now, await it to ensure consistency, it's fast DB insert.
+            await self._log_message(message, chat_id)
         return message
 
     async def send_photo(
         self,
-        chat_id: Union[int, str],
+        chat_id: int | str,
         photo: Any,
         *args: Any,
         **kwargs: Any,
@@ -68,10 +76,10 @@ class LoggingBot(ExtBot): # Inherit from ExtBot which is used by Application
         if isinstance(chat_id, int):
             await self._log_message(message, chat_id)
         return message
-    
+
     async def send_document(
         self,
-        chat_id: Union[int, str],
+        chat_id: int | str,
         document: Any,
         *args: Any,
         **kwargs: Any,
@@ -80,4 +88,3 @@ class LoggingBot(ExtBot): # Inherit from ExtBot which is used by Application
         if isinstance(chat_id, int):
             await self._log_message(message, chat_id)
         return message
-

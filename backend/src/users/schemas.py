@@ -1,53 +1,51 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from pydantic import Field, field_validator
+
 from src.common.schemas import AppBaseModel, PaginatedResponse
 
+
 class UserValidationMixin:
-    
-    @field_validator('external_id', check_fields=False)
+
+    @field_validator("external_id", check_fields=False)
     @classmethod
-    def validate_external_id(cls, v: Optional[int]) -> Optional[int]:
+    def validate_external_id(cls, v: int | None) -> int | None:
         if v is not None:
             if v <= 0:
                 raise ValueError("External ID must be a positive integer")
         return v
 
-    @field_validator('is_active', check_fields=False)
+    @field_validator("is_active", check_fields=False)
     @classmethod
-    def validate_is_active(cls, v: Optional[bool]) -> Optional[bool]:
+    def validate_is_active(cls, v: bool | None) -> bool | None:
         # Boolean validation is handled by Pydantic, but we can add custom logic if needed
         return v
 
+
 # --- BASE MODEL ---
 class UserBase(AppBaseModel, UserValidationMixin):
-    
+
     external_id: int = Field(
         ...,
         gt=0,
-        description="Telegram user ID for external authentication (required, must be positive)"
+        description="Telegram user ID for external authentication (required, must be positive)",
     )
-    
-    is_active: bool = Field(
-        True,
-        description="User activity status (default: true)"
-    )
+
+    is_active: bool = Field(True, description="User activity status (default: true)")
+
 
 class UserCreate(UserBase):
     pass
 
+
 class UserUpdate(AppBaseModel, UserValidationMixin):
-    
-    external_id: Optional[int] = Field(
-        None,
-        gt=0,
-        description="Telegram user ID (typically should not be changed)"
+
+    external_id: int | None = Field(
+        None, gt=0, description="Telegram user ID (typically should not be changed)"
     )
-    
-    is_active: Optional[bool] = Field(
-        None,
-        description="User activity status"
-    )
+
+    is_active: bool | None = Field(None, description="User activity status")
+
 
 # --- RESPONSES ---
 class UserResponse(UserBase):
@@ -55,39 +53,34 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
+
 class UserListResponse(PaginatedResponse[UserResponse]):
     pass
+
 
 # --- USAGE STATISTICS ---
 class UsageStats(AppBaseModel):
     """
     Usage statistics for freemium model tracking.
     """
+
     bills_this_month: int = Field(
-        ...,
-        ge=0,
-        description="Number of bills processed in current month"
+        ..., ge=0, description="Number of bills processed in current month"
     )
-    
+
     monthly_limit: int = Field(
-        ...,
-        gt=0,
-        description="Monthly limit for bills (100 for free tier)"
+        ..., gt=0, description="Monthly limit for bills (100 for free tier)"
     )
-    
+
     remaining_bills: int = Field(
-        ...,
-        ge=0,
-        description="Remaining bills available this month"
+        ..., ge=0, description="Remaining bills available this month"
     )
+
 
 class UserWithUsageResponse(UserResponse):
     """
     User profile with usage statistics.
     Used by GET /users/me endpoint.
     """
-    usage: UsageStats = Field(
-        ...,
-        description="Usage statistics for freemium model"
-    )
 
+    usage: UsageStats = Field(..., description="Usage statistics for freemium model")

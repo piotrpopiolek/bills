@@ -1,7 +1,7 @@
 """Public HTTP must not issue magic-link login URLs."""
+
 import pytest
 from httpx import ASGITransport, AsyncClient
-
 from main import app
 
 

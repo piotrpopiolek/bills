@@ -1,0 +1,51 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Black formats code but does not wrap string literals. E501 on those lines
+# would fail every existing module; line length is enforced by black --check.
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.File",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Body",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "."
+explicit_package_bases = true
+namespace_packages = true
+packages = ["src"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+# Measured coverage is 34.92%. Predictor and cogitomedica gate at 80.
+# This floor blocks regressions. Raise it as tests land; do not lower it.
+fail_under = 34
+show_missing = true
+skip_covered = true

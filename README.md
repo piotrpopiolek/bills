@@ -35,7 +35,7 @@ For full product details, see the PRD:
 ## Tech stack
 
 - Backend:
-  - Python 3.11+, FastAPI, Uvicorn
+  - Python 3.13, FastAPI, Uvicorn
   - SQLAlchemy (ORM), Pydantic (validation)
   - python-telegram-bot (Telegram integration)
   - sentry-sdk (logging/monitoring)
@@ -67,7 +67,7 @@ See also: `.ai/tech-stack.md`
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.13
 - Node.js 18+ and npm or pnpm
 - Supabase account (or local PostgreSQL 14+)
 - OpenAI API key

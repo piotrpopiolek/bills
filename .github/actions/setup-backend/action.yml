@@ -1,0 +1,20 @@
+name: Setup backend Python
+description: Install Python 3.13 and a requirements file from backend/
+inputs:
+  requirements-file:
+    description: Filename inside backend/
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.13"
+        cache: pip
+        cache-dependency-path: backend/${{ inputs.requirements-file }}
+    - name: Install Python dependencies
+      shell: bash
+      working-directory: backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ inputs.requirements-file }}

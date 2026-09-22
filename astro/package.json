@@ -8,6 +8,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "test": "vitest",
+    "test:ci": "vitest run",
     "test:ui": "vitest --ui",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",

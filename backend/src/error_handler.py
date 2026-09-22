@@ -1,31 +1,28 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from src.common.exceptions import (
-    ResourceNotFoundError, 
-    ResourceAlreadyExistsError,
-    BillAccessDeniedError,
-    AppError
-)
-from src.categories.exceptions import (
-    CategoryCycleError, 
-    CategoryHasChildrenError
-)
 from src.auth.exceptions import (
     InvalidTokenError,
-    TokenExpiredError,
     TokenAlreadyUsedError,
-    UserNotFoundError as AuthUserNotFoundError
+    TokenExpiredError,
+)
+from src.auth.exceptions import UserNotFoundError as AuthUserNotFoundError
+from src.categories.exceptions import CategoryCycleError, CategoryHasChildrenError
+from src.common.exceptions import (
+    BillAccessDeniedError,
+    ResourceAlreadyExistsError,
+    ResourceNotFoundError,
 )
 from src.ocr.exceptions import (
-    FileValidationError,
-    ExtractionError,
     AIServiceError,
+    ExtractionError,
+    FileValidationError,
 )
 from src.reports.exceptions import (
     InvalidDateRangeError,
     InvalidMonthFormatError,
 )
+
 
 def exception_handler(app: FastAPI) -> None:
     """
@@ -41,7 +38,9 @@ def exception_handler(app: FastAPI) -> None:
         )
 
     @app.exception_handler(ResourceAlreadyExistsError)
-    async def resource_already_exists_handler(request: Request, exc: ResourceAlreadyExistsError):
+    async def resource_already_exists_handler(
+        request: Request, exc: ResourceAlreadyExistsError
+    ):
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": exc.message},
@@ -55,40 +54,42 @@ def exception_handler(app: FastAPI) -> None:
         )
 
     @app.exception_handler(CategoryHasChildrenError)
-    async def category_has_children_handler(request: Request, exc: CategoryHasChildrenError):
+    async def category_has_children_handler(
+        request: Request, exc: CategoryHasChildrenError
+    ):
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": str(exc)},
         )
-    
+
     @app.exception_handler(InvalidTokenError)
     async def invalid_token_handler(request: Request, exc: InvalidTokenError):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
         )
-    
+
     @app.exception_handler(TokenExpiredError)
     async def token_expired_handler(request: Request, exc: TokenExpiredError):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exc)},
         )
-    
+
     @app.exception_handler(TokenAlreadyUsedError)
     async def token_already_used_handler(request: Request, exc: TokenAlreadyUsedError):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exc)},
         )
-    
+
     @app.exception_handler(AuthUserNotFoundError)
     async def auth_user_not_found_handler(request: Request, exc: AuthUserNotFoundError):
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"detail": str(exc)},
         )
-    
+
     @app.exception_handler(BillAccessDeniedError)
     async def bill_access_denied_handler(request: Request, exc: BillAccessDeniedError):
         return JSONResponse(
@@ -116,18 +117,19 @@ def exception_handler(app: FastAPI) -> None:
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={"detail": "AI Service temporarily unavailable"},
         )
-    
+
     @app.exception_handler(InvalidDateRangeError)
     async def invalid_date_range_handler(request: Request, exc: InvalidDateRangeError):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
         )
-    
+
     @app.exception_handler(InvalidMonthFormatError)
-    async def invalid_month_format_handler(request: Request, exc: InvalidMonthFormatError):
+    async def invalid_month_format_handler(
+        request: Request, exc: InvalidMonthFormatError
+    ):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
         )
-

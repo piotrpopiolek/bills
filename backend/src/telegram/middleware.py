@@ -1,13 +1,17 @@
 import logging
+
+from src.auth.services import AuthService
+from src.common.exceptions import ResourceAlreadyExistsError, UserCreationError
+from src.telegram.context import get_db_session, set_user
+from src.telegram_messages.services import (
+    TelegramLoggingService,
+    TelegramMessageService,
+)
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from src.telegram.context import get_db_session, set_user
-from src.auth.services import AuthService
-from src.telegram_messages.services import TelegramLoggingService, TelegramMessageService
-from src.common.exceptions import ResourceAlreadyExistsError, UserCreationError
-
 logger = logging.getLogger(__name__)
+
 
 async def logging_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -26,13 +30,13 @@ async def logging_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     telegram_id = update.effective_user.id
     auth_service = AuthService(session)
-    
+
     try:
         # Get or create user
         # This acts as a centralized point for user creation
         # We handle concurrency via DB unique constraints inside AuthService
         user = await auth_service.get_or_create_user_by_telegram_id(telegram_id)
-        
+
         # Store in ContextVar for downstream handlers
         set_user(user)
 
@@ -45,4 +49,3 @@ async def logging_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.error(f"Error in logging middleware (user creation): {e}")
     except Exception as e:
         logger.error(f"Unexpected error in logging middleware: {e}", exc_info=True)
-

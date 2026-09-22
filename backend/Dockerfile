@@ -1,5 +1,4 @@
-# Use Python 3.11 slim as base image
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # IMPORTANT: This Dockerfile expects build context to be the project root (/)
 # In Railway, set Root Directory to / (root) and Build Command to:
@@ -55,7 +54,7 @@ RUN sed -i 's/\r$//' /prestart.sh && chmod +x /prestart.sh
 EXPOSE 8000
 
 # Create entrypoint script that runs migrations then starts the app.
-# python:3.11-slim has /bin/sh, not bash.
+# python:3.13-slim has /bin/sh, not bash.
 RUN printf '%s\n' '#!/bin/sh' 'set -e' '/prestart.sh' 'exec uvicorn main:app --host 0.0.0.0 --port 8000' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
