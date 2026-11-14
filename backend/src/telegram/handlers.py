@@ -7,7 +7,7 @@ from src.auth.services import AuthService
 from src.bill_items.models import BillItem
 from src.bills.dependencies import get_bill_verification_service
 from src.bills.models import Bill, ProcessingStatus
-from src.bills.schemas import BillCreate
+from src.bills.schemas import BillCreate, BillUpdate
 from src.bills.services import BillService
 from src.common.exceptions import ResourceNotFoundError
 from src.processing.dependencies import get_bills_processor_service
@@ -450,6 +450,24 @@ async def verify_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
 
+async def _mark_receipt_processing_failed(
+    bill_service: BillService, bill_id: int, user_id: int, error_message: str
+) -> None:
+    """Persist ERROR so a failed OCR pass does not consume the monthly quota."""
+    truncated = error_message[:1000] if error_message else "Nieznany błąd"
+    try:
+        await bill_service.update(
+            bill_id,
+            BillUpdate(status=ProcessingStatus.ERROR, error_message=truncated),
+            user_id,
+        )
+    except Exception as status_error:
+        logger.error(
+            f"Failed to mark bill {bill_id} as ERROR: {status_error}",
+            exc_info=True,
+        )
+
+
 async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle incoming receipt images.
@@ -693,15 +711,19 @@ async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYP
                 else:
                     # Status PROCESSING (nie powinno się zdarzyć, ale na wszelki wypadek)
                     await status_message.edit_text(
-                        f"⏳ Paragon w trakcie przetwarzania...\n" f"ID: {bill.id}"
+                        f"⏳ Paragon w trakcie przetwarzania...\nID: {bill.id}"
                     )
 
             except Exception as e:
                 logger.error(
                     f"Error processing receipt bill_id={bill.id}: {e}", exc_info=True
                 )
-                # Bill status will be ERROR (set by BillsProcessorService._set_error())
-                # Inform user about the error
+                # The processor usually persists ERROR before re-raising. A caller
+                # that only raises would leave the row PENDING, and PENDING still
+                # consumes the monthly quota. Persist ERROR here so the slot is freed.
+                await _mark_receipt_processing_failed(
+                    bill_service, bill.id, user_id, str(e)
+                )
                 await status_message.edit_text(
                     f"⚠️ Paragon zapisany, ale wystąpił błąd podczas analizy.\n"
                     f"ID: {bill.id}\n"

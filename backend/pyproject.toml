@@ -44,8 +44,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-# Measured coverage is 34.92%. Predictor and cogitomedica gate at 80.
-# This floor blocks regressions. Raise it as tests land; do not lower it.
-fail_under = 34
+# Measured coverage is 43.06%. Target gate at 80.
+fail_under = 43
 show_missing = true
 skip_covered = true

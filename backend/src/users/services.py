@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bills.models import Bill
+from src.bills.models import Bill, ProcessingStatus
 from src.common.exceptions import ResourceAlreadyExistsError, UserCreationError
 from src.common.services import AppService
 from src.config import settings
@@ -123,15 +123,16 @@ class UserService(AppService[User, UserCreate, UserUpdate]):
 
     async def get_bills_count_this_month(self, user_id: int) -> int:
         """
-        Count bills created by user in the current month.
+        Count bills that consume the user's monthly freemium quota.
 
-        Used for freemium limit tracking (100 bills per month).
+        A receipt that failed OCR stays in the database with status ERROR so the
+        user can see the failure, but it does not use one of the 100 monthly slots.
 
         Args:
             user_id: User ID to count bills for
 
         Returns:
-            Number of bills created in current month
+            Number of non-error bills created in the current month
         """
         # Get first and last day of current month (timezone-aware)
         now = datetime.now(UTC)
@@ -142,11 +143,12 @@ class UserService(AppService[User, UserCreate, UserUpdate]):
         else:
             month_end = datetime(now.year, now.month + 1, 1, tzinfo=UTC)
 
-        # Count bills in current month
+        # ERROR rows are kept for the user, but a failed OCR pass is not a receipt.
         stmt = select(func.count(Bill.id)).where(
             Bill.user_id == user_id,
             Bill.created_at >= month_start,
             Bill.created_at < month_end,
+            Bill.status != ProcessingStatus.ERROR,
         )
 
         result = await self.session.execute(stmt)
