@@ -27,6 +27,7 @@ from src.shops.services import ShopService
 from src.users.models import User
 from src.users.services import UserService
 
+# Local Compose publishes Postgres on 5433. CI sets TEST_DATABASE_URL or DATABASE_URL.
 COMPOSE_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/postgres"
 RAW_SHOP_ADDRESS = "UL. Akacjowa 1, 62-023 Gądki; ul. Inna 9, 00-001 Warszawa"
 NORMALIZED_SHOP_ADDRESS = "ul. akacjowa 1 62-023 gądki"
@@ -35,7 +36,11 @@ RECEIPT_ITEM = "MLEKO 3.2%"
 
 
 def test_database_url() -> str:
-    raw = os.environ.get("TEST_DATABASE_URL", COMPOSE_DATABASE_URL)
+    raw = (
+        os.environ.get("TEST_DATABASE_URL")
+        or os.environ.get("DATABASE_URL")
+        or COMPOSE_DATABASE_URL
+    )
     if raw.startswith("postgresql://"):
         return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
     return raw

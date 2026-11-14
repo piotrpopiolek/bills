@@ -20,7 +20,7 @@ pydantic-settings==2.10.1
 pydantic==2.11.7
 pydantic_core==2.33.2
 python-dotenv==1.2.2
-PyJWT==2.14.0
+PyJWT==2.15.0
 python-multipart==0.0.31
 python-telegram-bot
 requests==2.33.0
