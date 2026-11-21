@@ -36,6 +36,16 @@ describe('getBackendUrl', () => {
       expected: 'http://127.0.0.1:8000',
     },
     {
+      id: 'docker-service-stays-http',
+      raw: 'http://backend:8000',
+      expected: 'http://backend:8000',
+    },
+    {
+      id: 'bare-docker-service-gets-http',
+      raw: 'backend:8000',
+      expected: 'http://backend:8000',
+    },
+    {
       id: 'public-http-becomes-https',
       raw: 'http://api.example.com',
       expected: 'https://api.example.com',

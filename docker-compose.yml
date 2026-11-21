@@ -7,10 +7,15 @@ services:
       dockerfile: backend/Dockerfile
     container_name: bills-backend
     ports:
-      - '8000:8000'
+      - '8001:8000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     environment:
       - PORT=8000
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@db:5432/postgres}
+      # Host .env points at 127.0.0.1:54322 (local Supabase). Inside this
+      # container that address is the container itself, so reach the host instead.
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - WEB_APP_URL=http://localhost:8082
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
