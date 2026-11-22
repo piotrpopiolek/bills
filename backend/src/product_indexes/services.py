@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.categories.models import Category
 from src.common.exceptions import ResourceAlreadyExistsError
 from src.common.services import AppService
+from src.product_indexes.catalog import CatalogHit
 from src.product_indexes.embeddings import ProductNameEmbedder
 from src.product_indexes.exceptions import EmbeddingError
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS, ProductIndex
@@ -55,6 +56,43 @@ class ProductIndexService(
             raise e
         return product
 
+    async def nearest_catalog(
+        self, query: list[float], *, top_k: int
+    ) -> list[tuple[ProductIndex, CatalogHit]]:
+        """Top-k catalog rows nearest to the query, with category names."""
+        if len(query) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
+            raise EmbeddingError(
+                f"Embedding ma {len(query)} wymiarów, "
+                f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
+            )
+        if top_k < 1:
+            return []
+        distance = ProductIndex.embedding.cosine_distance(query)
+        similarity = (1 - distance).label("similarity")
+        stmt = (
+            select(ProductIndex, Category.name, similarity)
+            .outerjoin(Category, Category.id == ProductIndex.category_id)
+            .where(ProductIndex.embedding.is_not(None))
+            .order_by(distance.asc())
+            .limit(top_k)
+        )
+        found: list[tuple[ProductIndex, CatalogHit]] = []
+        for row in (await self.session.execute(stmt)).all():
+            product = cast(ProductIndex, row[0])
+            category_name = cast(str | None, row[1])
+            score = 0.0 if row[2] is None else float(row[2])
+            found.append(
+                (
+                    product,
+                    CatalogHit(
+                        name=product.name,
+                        category_name=category_name,
+                        similarity=score,
+                    ),
+                )
+            )
+        return found
+
     async def search_by_embedding(
         self,
         query: list[float],
@@ -63,29 +101,10 @@ class ProductIndexService(
         top_k: int,
     ) -> ProductIndex | None:
         """Nearest catalog name at or above the cosine similarity threshold."""
-        if len(query) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
-            raise EmbeddingError(
-                f"Embedding ma {len(query)} wymiarów, "
-                f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
-            )
-        if top_k < 1:
+        rows = await self.nearest_catalog(query, top_k=top_k)
+        if not rows or rows[0][1].similarity < threshold:
             return None
-        distance = ProductIndex.embedding.cosine_distance(query)
-        similarity = (1 - distance).label("similarity")
-        stmt = (
-            select(ProductIndex, similarity)
-            .where(ProductIndex.embedding.is_not(None))
-            .order_by(distance.asc())
-            .limit(top_k)
-        )
-        rows = (await self.session.execute(stmt)).all()
-        if not rows:
-            return None
-        product = cast(ProductIndex, rows[0][0])
-        score = rows[0][1]
-        if score is None or float(score) < threshold:
-            return None
-        return product
+        return rows[0][0]
 
     async def _ensure_unique_name(
         self, name: str, exclude_id: int | None = None

@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from src.ai.catalog_prompt import build_categorization_prompt
 from src.ai.schemas import NormalizedItem
 from src.categories.models import Category
 from src.categories.schemas import CategoryResponse
@@ -18,6 +19,7 @@ from src.config import settings
 from src.ocr.schemas import OCRItem
 from src.product_index_aliases.models import ProductIndexAlias
 from src.product_index_aliases.services import ProductIndexAliasService
+from src.product_indexes.catalog import CatalogHit
 from src.product_indexes.models import ProductIndex
 from src.product_indexes.services import ProductIndexService
 
@@ -223,18 +225,22 @@ class AICategorizationService:
 
         return row[0] if row else None
 
-    async def _find_by_vector(self, cleaned_text: str) -> ProductIndex | None:
-        """Top-k cosine search. Below the threshold this returns None."""
+    async def _find_by_vector(
+        self, cleaned_text: str
+    ) -> tuple[ProductIndex | None, list[CatalogHit]]:
+        """Top-k cosine search. Hits stay available when the score is too low."""
         try:
             query = await self.product_index_service.embed_name(cleaned_text)
-            return await self.product_index_service.search_by_embedding(
-                query,
-                threshold=settings.AI_VECTOR_SIMILARITY_THRESHOLD,
-                top_k=settings.AI_VECTOR_TOP_K,
+            rows = await self.product_index_service.nearest_catalog(
+                query, top_k=settings.AI_VECTOR_TOP_K
             )
         except Exception as exc:
             logger.warning("Wyszukiwanie wektorowe nie doszło do skutku: %s", exc)
-            return None
+            return None, []
+        hits = [hit for _, hit in rows]
+        if not hits or hits[0].similarity < settings.AI_VECTOR_SIMILARITY_THRESHOLD:
+            return None, hits
+        return rows[0][0], hits
 
     async def _assign_category(
         self,
@@ -242,6 +248,7 @@ class AICategorizationService:
         cleaned_text: str,
         category_suggestion: str | None = None,
         shop_name: str | None = None,
+        catalog_hits: list[CatalogHit] | None = None,
     ) -> CategoryResponse:
         """
         Przypisuje kategorię do produktu.
@@ -290,6 +297,7 @@ class AICategorizationService:
                 category_suggestion=category_suggestion,
                 shop_name=shop_name,
                 available_categories=available_categories,
+                catalog_hits=catalog_hits or [],
             )
 
             if ai_category_id:
@@ -323,6 +331,7 @@ class AICategorizationService:
         category_suggestion: str | None = None,
         shop_name: str | None = None,
         available_categories: list[Category] | None = None,
+        catalog_hits: list[CatalogHit] | None = None,
     ) -> int | None:
         """
         Używa Gemini API do zaproponowania kategorii dla nieznanego produktu.
@@ -353,29 +362,13 @@ class AICategorizationService:
             logger.warning("Brak dostępnych kategorii dla AI Categorization")
             return None
 
-        # Przygotowanie promptu
-        categories_list = "\n".join([f"- {cat.name}" for cat in available_categories])
-
-        prompt = f"""Jesteś ekspertem w kategoryzacji produktów ze sklepów.
-
-Produkt: {cleaned_text}
-Sugerowana kategoria (z OCR): {category_suggestion or "brak"}
-Sklep: {shop_name or "nieznany"}
-
-Dostępne kategorie:
-{categories_list}
-
-Zadanie:
-1. Wybierz NAJLEPSZĄ kategorię z listy dostępnych kategorii dla tego produktu.
-2. Jeśli żadna kategoria nie pasuje idealnie, zwróć null (nie wymyślaj nowych kategorii).
-3. Oceń swoją pewność (confidence) w przedziale 0.0-1.0.
-
-Zwróć odpowiedź w formacie JSON:
-{{
-    "category_name": "Nazwa kategorii z listy lub null",
-    "confidence": 0.95,
-    "reasoning": "Krótkie uzasadnienie wyboru"
-}}"""
+        prompt = build_categorization_prompt(
+            cleaned_text=cleaned_text,
+            category_suggestion=category_suggestion,
+            shop_name=shop_name,
+            hits=catalog_hits or [],
+            category_names=[cat.name for cat in available_categories],
+        )
 
         try:
             response = await self.gemini_model.generate_content_async(
@@ -488,8 +481,9 @@ Zwróć odpowiedź w formacie JSON:
         found_by_alias = product_index is not None
 
         # Step 2: top-k po wektorze. Powyżej progu bierzemy nazwę z katalogu.
+        catalog_hits: list[CatalogHit] = []
         if product_index is None:
-            product_index = await self._find_by_vector(cleaned_text)
+            product_index, catalog_hits = await self._find_by_vector(cleaned_text)
 
         # Step 3: Fuzzy search, gdy alias i wektor nie wystarczyły.
         if product_index is None:
@@ -516,6 +510,7 @@ Zwróć odpowiedź w formacie JSON:
             cleaned_text=cleaned_text,
             category_suggestion=ocr_item.category_suggestion,
             shop_name=shop_name,
+            catalog_hits=catalog_hits,
         )
 
         # Oblicz confidence score na podstawie wyniku normalizacji
