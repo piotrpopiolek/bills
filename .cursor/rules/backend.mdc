@@ -56,5 +56,4 @@ alwaysApply: false
 
 ## 7) Zależności
 
-- Do przepięcia na uv dopisuj paczki w `backend/requirements.txt` (dev i lint w swoich plikach).
-- Po przepięciu źródłem jest `backend/pyproject.toml` i `backend/uv.lock`.
+- Zależności dopisujesz w `backend/pyproject.toml`. Lock to `backend/uv.lock`.

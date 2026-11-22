@@ -11,7 +11,7 @@ Kontekst budowania obu obrazów to katalog główny repozytorium. Tagi są przyp
 ## Backend — `backend/Dockerfile`
 
 - Baza to `python:3.14-slim`. Proces słucha `0.0.0.0:8000`.
-- Do przepięcia na uv zależności wchodzą z `backend/requirements.txt`. Po nim obraz instaluje uv w przypiętej wersji i woła `uv sync --frozen --no-dev`.
+- Obraz kopiuje uv `0.13.9` i woła `uv sync --frozen --no-dev`.
 - `COPY` zależności jest osobną warstwą, przed kodem aplikacji.
 - Przed `CMD` ustaw `USER` inny niż root. Narzędzia systemowe instalujesz wcześniej, jako root.
 - Jest `HEALTHCHECK` na `http://localhost:8000/health`.

@@ -1,5 +1,7 @@
 FROM python:3.14-slim
 
+COPY --from=ghcr.io/astral-sh/uv:0.13.9 /uv /usr/local/bin/uv
+
 WORKDIR /app
 
 # curl fetches the Supabase CLI. postgresql-client is a fallback for migrations.
@@ -18,12 +20,10 @@ RUN curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase
     rm /tmp/supabase.tar.gz && \
     supabase --version
 
-# Copy requirements first for better layer caching
-# Note: Build context should be project root, so we copy from backend/
-COPY backend/requirements.txt .
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Build context is the repository root.
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy backend application code
 COPY backend/ .
