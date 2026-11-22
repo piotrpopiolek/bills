@@ -26,5 +26,5 @@ Kontekst budowania obu obrazów to katalog główny repozytorium. Tagi są przyp
 ## Compose
 
 - Backend publikuje 8000, frontend 8080. Oba mają healthcheck.
-- Postgres zostaje na przypiętym tagu 16. Gdy wchodzi pgvector, serwis testowy to `pgvector/pgvector:pg16`.
+- Postgres w Compose i serwis testowy to `pgvector/pgvector:pg16`.
 - Redis dochodzi razem z workerem ARQ, też z przypiętym tagiem.

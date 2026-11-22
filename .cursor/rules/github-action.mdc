@@ -20,7 +20,7 @@ Wspólny setup to [`.github/actions/setup-backend`](.github/actions/setup-backen
 - Joby backendu robią `uv sync --frozen`. Uv jest przypięty do `0.13.9`.
 - `lint` odpala `ruff check` i `ruff format --check`. Linia ma 88 znaków.
 - `typecheck` odpala `uv run mypy src`. `backend/pyproject.toml` ma `strict = true`.
-- `test` wstaje z Postgresem i nakłada pliki z `supabase/migrations`, potem pytest. Dziś obraz to `postgres:16-alpine`. Gdy wchodzi pgvector, serwis to `pgvector/pgvector:pg16`.
+- `test` wstaje z `pgvector/pgvector:pg16` i nakłada pliki z `supabase/migrations`, potem pytest.
 - `npm ci` nie jest ścieżką backendu.
 
 ## Frontend

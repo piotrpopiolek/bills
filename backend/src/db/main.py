@@ -1,5 +1,8 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 
+from pgvector.asyncpg import register_vector
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -16,6 +19,14 @@ engine = create_async_engine(
     max_overflow=settings.DB_MAX_OVERFLOW,
     echo=settings.ENV == "development",
 )
+
+
+def _register_vector(dbapi_connection: Any, _connection_record: Any) -> None:
+    """Teach asyncpg the vector type. The database must already have the extension."""
+    dbapi_connection.run_async(register_vector)
+
+
+event.listen(engine.sync_engine, "connect", _register_vector)
 
 AsyncSessionLocal = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False

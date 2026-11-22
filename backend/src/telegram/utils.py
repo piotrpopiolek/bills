@@ -209,7 +209,7 @@ def format_monthly_report(report: MonthlyReportResponse) -> str:
         ]
         month_name = month_names[month_num - 1]
         lines.append(f"📅 Miesiąc: {month_name} {year}")
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         lines.append(f"📅 Miesiąc: {report.month}")
 
     lines.append(f"💰 Łączna kwota: {report.total_amount:.2f} PLN")
