@@ -1,51 +1,32 @@
 ---
+description: Produkt i struktura Bills
 alwaysApply: true
 ---
 
-# AI Rules for Bills
+# Bills
 
-Bills is an application for automatic personal expense tracking that uses a Telegram bot as the main interface. Users send receipt photos, and the system automatically reads items using OCR (Gemini), categorizes them, and saves them to a database. The application operates on a freemium model with a monthly limit of 100 receipts and additionally offers a simple "read-only" web application for visualizing expense summaries. The goal is to automate the process of tracking daily expenses with minimal user effort.
+Bills liczy wydatki z paragonów. Użytkownik wysyła zdjęcie do bota na Telegramie. Backend FastAPI czyta pozycje przez Gemini, kategoryzuje je i zapisuje w bazie. Darmowy limit to 100 paragonów miesięcznie. Aplikacja Astro służy do podglądu i korekty rachunku.
 
-## Tech Stack
+## Stos
 
-- Astro 5
-- TypeScript 5
-- React 19
-- Tailwind 4
-- Shadcn/ui
-- Gemini
-- FastApi
-- Supabase
+- Backend: Python, FastAPI, Gemini
+- Dane: PostgreSQL przez Supabase, migracje SQL w `supabase/migrations`
+- Web: Astro 5, React 19, Tailwind 4, Shadcn
 
-## Project Structure
+## Struktura
 
-When introducing changes to the project, always follow the directory structure below:
+- `backend/` — FastAPI (`routes.py`, `schemas.py`, `services.py`, `models.py`)
+- `supabase/migrations/` — schemat bazy
+- `astro/src/pages` — strony i endpointy Astro
+- `astro/src/components` — komponenty Astro i React; Shadcn w `astro/src/components/ui`
+- `astro/src/lib` — wywołania backendu i helpery
+- `astro/src/types.ts` — typy współdzielone we frontendzie
+- `.github/workflows/` — CI
 
-- `./astro/src` - source code
-- `./astro/src/layouts` - Astro layouts
-- `./astro/src/pages` - Astro pages
-- `./astro/src/pages/api` - API endpoints
-- `./astro/src/middleware/index.ts` - Astro middleware
-- `./astro/src/db` - Supabase clients and types
-- `./astro/src/types.ts` - Shared types for backend and frontend (Entities, DTOs)
-- `./astro/src/components` - Client-side components written in Astro (static) and React (dynamic)
-- `./astro/src/components/ui` - Client-side components from Shadcn/ui
-- `./astro/src/lib` - Services and helpers
-- `./astro/src/assets` - static internal assets
-- `./astro/public` - public assets
+Po zmianie układu katalogów zaktualizuj tę listę.
 
-When modifying the directory structure, always update this section.
+## Kod
 
-## Coding practices
-
-### Guidelines for clean code
-
-- Use feedback from linters to improve the code when making changes.
-- Prioritize error handling and edge cases.
-- Handle errors and edge cases at the beginning of functions.
-- Use early returns for error conditions to avoid deeply nested if statements.
-- Place the happy path last in the function for improved readability.
-- Avoid unnecessary else statements; use if-return pattern instead.
-- Use guard clauses to handle preconditions and invalid states early.
-- Implement proper error logging and user-friendly error messages.
-- Consider using custom error types or error factories for consistent error handling.
+- Błędy i edge case obsługuj na początku funkcji, happy path zostaw na końcu.
+- Zamiast zagnieżdżonego `else` wracaj wcześnie.
+- Log błędu ma być czytelny dla osoby, która go czyta.

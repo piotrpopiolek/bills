@@ -1,75 +1,60 @@
 ---
+description: Zasady backendu FastAPI dla Bills
+globs: backend/**/*.py
 alwaysApply: false
 ---
 
-## BACKEND
+# BACKEND (FASTAPI) — Bills
 
-### Guidelines for PYTHON
+## 1) Architektura i granice warstw
 
-#### Backend FASTAPI
+- Warstwy modułu: `routes.py` (HTTP), `schemas.py` (kontrakty Pydantic), `services.py` (logika domenowa), `models.py` (SQLAlchemy).
+- Logika domenowa siedzi w serwisach. Reguł biznesowych nie zapisuj jako triggerów bazy.
+- Duplikacja kodu jest błędem do refaktoryzacji.
+- W klasach i serwisach trzymaj SRP i DIP.
 
-- Use Pydantic models as the primary validation mechanism, enforcing strict=True for API requests. Additionally, use Pydantic to validate and parse all responses from external AI systems (LLMs) to ensure type safety and protect against erroneous output.
-- Use async SQLAlchemy for implement dependency injection for services and database sessions to improve testability and resource management.
-- Use async endpoints for I/O-bound operations to improve throughput for {{high_load_endpoints}}.
-- Use FastAPI BackgroundTasks only for non-critical, instantaneous “fire-and-forget” operations, for critical, long-running, or distributed I/O-bound tasks, use Dramatiq.
-- Always use the virtual environment. If it is not active, activate venv\Scripts\activate.
-- Use path operation decorators consistently with appropriate HTTP methods (GET for retrieval, POST for creation, etc.).
-- Use DRY 
-Treat any code duplication introduced by AI (“cursor”) as a critical error at the code review level. The senior developer is responsible for aggressively and continuously refactoring duplications and replacing them with appropriate abstractions (functions, classes, dependencies) to prevent exponential growth of technical debt.
-- Use layered architecture (Service Layer) 
-Example
-src/categories/
-├── models.py      # Infrastructure Layer - SQLAlchemy (persistence)
-├── schemas.py     # Presentation Layer - Pydantic (API contracts)
-├── services.py    # Domain/Application Layer - Business logic
-└── routes.py      # Presentation Layer - HTTP 
-- Enforce SOLID principles in classes and services.
-S — Single Responsibility Principle
-O — Open/Closed Principle
-L — Liskov Substitution Principle
-I — Interface Segregation Principle
-D — Dependency Inversion Principle
-- To ensure eventual consistency in microservices architecture (EDA), implement distributed transactions using the SAGA pattern (Choreography or Orchestration) pattern. For reliable publication of domain events that trigger Saga steps, use the Transactional Outbox pattern to atomically bind state changes to outgoing events and avoid the double-write problem.
-- Use SAGA & Outbox
-┌─────────────────┐
-│  Application    │
-│  (FastAPI)      │
-└────────┬────────┘
-         │
-         │ 1. Transaction
-         ▼
-┌─────────────────────────────────┐
-│  PostgreSQL                     │
-│  ┌──────────┐  ┌──────────────┐ │
-│  │  bills  │  │  outbox       │ │
-│  │          │  │  - id        │ │
-│  │  id: 1   │  │  - event_type│ │
-│  │  ...     │  │  - payload   │ │
-│  └──────────┘  │  - status    │ │
-│                │  - created_at│ │
-│                └──────────────┘ │
-└─────────────────────────────────┘
-         │
-         │ 2. Polling/Polling
-         ▼
-┌─────────────────┐
-│  Outbox Worker  │
-│  (Dramatiq)       │
-└────────┬────────┘
-         │
-         │ 3. Publish
-         ▼
-┌─────────────────┐
-│  RabbitMQ       │
-│  (Event Broker) │
-└─────────────────┘
-- Select an LLM integration framework based on a specific use case, rather than imposing a single solution. 
-Consider:
-LlamaIndex for advanced or custom RAG systems.
-Pydantic.ai (or similar) for interactions based on strict schemas and output validation.   
-LangChain for rapid prototyping of complex, multi-step agents and systems based on multiple tools.
-- Implement the three pillars of observability (Logs, Metrics, Traces) using OpenTelemetry (OTEL) as a unified instrumentation layer. Configure OTEL to collect LLM-specific metrics (e.g., token consumption, latency, errors). Export metrics to Prometheus for storage, and use Grafana as a platform for visualisation and alerting.
-- Use Error handling separation
-Presentation layer – HTTPException errors
-Domain/Service layer – domain errors
-Global application level – global error handler
+## 2) HTTP, sesja i autoryzacja
+
+- Endpointy I/O są `async def`. Sesja to `AsyncSession` wstrzykiwana przez `Depends`.
+- Metoda HTTP i kod odpowiedzi odpowiadają operacji.
+- Chroniony endpoint przyjmuje `user: CurrentUser` z `src.deps`. Wyjątki: logowanie, health, webhook Telegrama z walidacją sekretu.
+- Zapytanie w endpoincie z użytkownikiem filtruje dane po `user.id`.
+
+## 3) Kontrakty i model
+
+- Wejście API dziedziczy po `AppBaseModel` (`strict=True`).
+- Odpowiedź modelu (Gemini) waliduj Pydanticem z `extra="forbid"`. Jeden dostawca.
+- Do wejścia A5 wołaj Gemini zwykłym klientem. LangChain tylko na ścieżce „katalog, potem prompt”. Drugiej biblioteki orkiestracji nie dodawaj.
+- Test modelu idzie na atrapie, bez sieci. README wolno nazwać to RAG-iem katalogu produktów dopiero, gdy testy A1–A8 są zielone.
+
+## 4) Czas żądania i skutki uboczne
+
+- Odbiór zdjęcia paragonu zapisuje rachunek i wraca. OCR idzie do workera ARQ na Redisie.
+- Zadanie niesie `bill_id` i woła `process_receipt`. Po wyczerpaniu prób status schodzi na `error`.
+- W bocie tego wydania zostają logowanie, wrzutka i komunikat „przyjęte”.
+- Nie dodawaj Dramatiq, Celery, RabbitMQ ani Sagi.
+- Outbox dodajesz dopiero przy skutku ubocznym po commicie. Dziś go w Bills nie ma.
+
+## 5) Błędy, sekrety, typowanie
+
+- Serwis rzuca wyjątek domenowy. Routa rzuca `HTTPException`. Tłumaczenie jest w `src/error_handler.py`.
+- Sekrety czytaj przez `Settings` (`pydantic-settings`). Nie wstawiaj ich do kodu.
+- Python 3.14, `ruff check`, `ruff format`, linia 88. Nowy kod ma adnotacje typów.
+- Mypy w `backend/pyproject.toml` ma `strict = true`. Bramkę w CI podnosisz z `scripts/check_mypy_baseline.py` osobnym krokiem, gdy `mypy` jest zielone. Przy innej zmianie baseline zostaje.
+
+## 6) Katalog, limity i korekta
+
+- W `src/ai/service.py` kolejność to alias (użytkownik i sklep, potem sklep, potem globalnie), następnie top-k po wektorze obok `pg_trgm`.
+- Powyżej progu bierzemy nazwę i kategorię z katalogu. Model generujący się wtedy nie woła. Pusty katalog i wynik poniżej progu idą ścieżką Gemini.
+- Jeden model embeddingów. W teście wektor jest zamrożony, bez sieci.
+- Kolumna embeddingu dochodzi migracją SQL w `supabase/migrations`. Alembic nie wchodzi.
+- Limit 100 paragonów miesięcznie i dzienny limit modelu generującego są osobne. Embedding przy zapisie `ProductIndex` ma własny budżet.
+- Zapis wywołania modelu: model, tokeny, `latency_ms`, koszt, wynik.
+- Zmiana nazwy przez użytkownika zapisuje alias i, przy nowym `ProductIndex`, embedding. Cena, ilość, data i sklep modelu nie wołają.
+- Taki zapis ustawia `verification_source=user`. Próg 20% różnicy sumy zostaje przy odczycie OCR.
+- Agent ReAct, MCP i pulpit Langfuse zostają fazą następną. Przy A1–A8 nie ruszasz `fail_under` ani diff-cover.
+
+## 7) Zależności
+
+- Do przepięcia na uv dopisuj paczki w `backend/requirements.txt` (dev i lint w swoich plikach).
+- Po przepięciu źródłem jest `backend/pyproject.toml` i `backend/uv.lock`.

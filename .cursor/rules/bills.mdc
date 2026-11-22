@@ -1,7 +1,0 @@
----
-alwaysApply: true
----
-
-# AI Rules for Bills
-
-Celem aplikacji "Bills" jest zautomatyzowanie i uproszczenie procesu monitorowania wydatków osobistych. Użytkownicy, robiąc zdjęcie paragonu i wysyłając je do bota na Telegramie, otrzymują automatyczną analizę swoich zakupów. System wykorzystuje technologię OCR do odczytu danych, a zaawansowane modele AI do kategoryzacji i normalizacji produktów. Wersja MVP (Minimum Viable Product) skupia się na użytkownikach indywidualnych. Głównym interfejsem jest bot na Telegramie, uzupełniony o prostą aplikację webową w trybie "tylko do odczytu", która służy do wizualizacji podsumowań. Produkt działa w modelu freemium, z darmowym limitem do 100 paragonów miesięcznie.

@@ -1,25 +1,16 @@
 ---
-description: E2E testing with Playwright
-globs:
+description: E2E Playwright we frontendzie Bills
+globs: "astro/e2e/**/*.ts,astro/playwright.config.ts"
 alwaysApply: false
 ---
 
-## TESTING
+# Playwright — Bills
 
-### Guidelines for E2E
+Testy są w `astro/e2e`. `astro/playwright.config.ts` ma trzy projekty, jak E2E w Cogitomedice: `chromium` (Desktop Chrome), `firefox` (Desktop Firefox) i `msedge` (Desktop Edge, kanał `msedge`).
 
-#### PLAYWRIGHT
+Job E2E w `.github/workflows/ci.yml` ma macierz `chromium`, `firefox`, `msedge`, z `fail-fast: false`. `astro check` i Vitest zostają osobnym jobem frontu.
 
-- Initialize configuration only with Chromium/Desktop Chrome browser
-- Use browser contexts for isolating test environments
-- Implement the Page Object Model for maintainable tests in ./e2e/page-objects
-- Use `data-testid` attributes when introducing resilient test-oriented selectors
-- When following `data-testid` convention, locate elements by `await page.getByTestId('selectorName')`
-- Leverage API testing for backend validation
-- Implement visual comparison with expect(page).toHaveScreenshot()
-- Use the codegen tool for test recording
-- Leverage trace viewer for debugging test failures
-- Implement test hooks for setup and teardown
-- Use expect assertions with specific matchers
-- Leverage parallel execution for faster test runs
-- Follow 'Arrange', 'Act', 'Assert' approach to test structure for simplicity and readability.
+- Selektor odporny na zmianę stylu to `data-testid`, czytany przez `page.getByTestId`.
+- Asercje idą przez `expect`. Układ kroku to Arrange, Act, Assert.
+- Izolacja środowiska to osobny browser context.
+- Zrzut i ślad bierzesz przy nieudanym przebiegu. `trace` w konfiguracji jest `on-first-retry`.

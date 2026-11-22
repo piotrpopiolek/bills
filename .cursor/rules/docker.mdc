@@ -1,75 +1,30 @@
 ---
-description: 
-globs: 
+description: Obrazy Docker backendu i frontendu Bills
+globs: "**/Dockerfile*,**/docker-compose*.yml"
 alwaysApply: false
 ---
-# Docker Best Practices for Modern Web Applications
 
-## Dockerfile Structure
+# Docker — Bills
 
-### Naming and Conventions
-- Always use UPPERCASED keywords
+Kontekst budowania obu obrazów to katalog główny repozytorium. Tagi są przypięte. `:latest` nie wchodzi. Sekrety podajesz zmiennymi przy starcie, nie przez `ENV` ani `ARG` w Dockerfile. Logi idą na stdout i stderr.
 
-### Base Image Selection
-- Always use specific version tags matching tech stack (e.g., `node:22-alpine` not `node:latest`)
-- Use images compatible with CI/CD & Github Actions runner - `ubuntu-latest`
-- Choose slim/alpine variants for production images
-- Use two-stage builds to separate build and runtime environments
-- Analyze deps and scripts that may cause issues when switching between build and runtime step (i.e. devDependency required in "prepare", but not installed)
+## Backend — `backend/Dockerfile`
 
-### Instruction Order
-1. FROM - Base image definition
-2. ARG - Build-time variables (can also appear before FROM)
-3. LABEL - Image metadata
-4. ENV - Environment variables
-5. WORKDIR - Set working directory
-6. RUN - Execute commands
-7. COPY - Add files from build context
-8. USER - Switch to non-root user
-9. EXPOSE - Document ports
-10. HEALTHCHECK - Container health monitoring
-11. CMD - Default command
+- Baza to `python:3.14-slim`. Proces słucha `0.0.0.0:8000`.
+- Do przepięcia na uv zależności wchodzą z `backend/requirements.txt`. Po nim obraz instaluje uv w przypiętej wersji i woła `uv sync --frozen --no-dev`.
+- `COPY` zależności jest osobną warstwą, przed kodem aplikacji.
+- Przed `CMD` ustaw `USER` inny niż root. Narzędzia systemowe instalujesz wcześniej, jako root.
+- Jest `HEALTHCHECK` na `http://localhost:8000/health`.
+- Supabase CLI, jeśli zostaje w obrazie, ma przypiętą wersję.
 
-### Essential Security Practices
-- Run containers as non-root users
-- Never store secrets or credentials in images
-- Set appropriate file permissions
-- Use COPY instead of ADD for predictable behavior
-- Scan images for vulnerabilities before deployment
+## Frontend — `astro/Dockerfile`
 
-### Optimization Essentials
-- Use .dockerignore to exclude unnecessary files
-- Order instructions by change frequency (least frequent first)
-- Cache dependency installation separately from application code
-- Copy only what's needed in multi-stage builds using `--from`
-- Clean up package manager caches in the same layer they're created
+- Node jest tylko tutaj: `node:20-alpine`, dwa etapy, `npm ci`, port 8080, `HOST=0.0.0.0`.
+- `node_modules` i port 8080 nie dotyczą obrazu backendu.
+- Jest `HEALTHCHECK` na `/health`.
 
-### Health & Monitoring
-- Always implement HEALTHCHECK instructions
-- Configure logging to stdout/stderr
-- Document exposed ports with EXPOSE instruction
+## Compose
 
-## Docker Commands
-
-### Building
-- Use versioning based on commit SHA for image tags
-- Add metadata with labels
-- Enable BuildKit for better performance
-- Always build app in production mode based on provided tech stack
-- Ask if `node_modules` directory is required in runtime
-
-### Running
-- Set appropriate resource limits
-- Use read-only filesystem when possible
-- Name containers for easier management
-
-### Docker Compose
-- Use version '3' or higher syntax
-- Define networks explicitly
-- Set appropriate restart policies
-
-# Application Configuration
-
-## Networking
-
-- Adjust app to use HOST 0.0.0.0 and PORT 8080 (for Docker Build / Run) - default to currently used value
+- Backend publikuje 8000, frontend 8080. Oba mają healthcheck.
+- Postgres zostaje na przypiętym tagu 16. Gdy wchodzi pgvector, serwis testowy to `pgvector/pgvector:pg16`.
+- Redis dochodzi razem z workerem ARQ, też z przypiętym tagiem.

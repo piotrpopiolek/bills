@@ -1,13 +1,24 @@
 ---
+description: Pytest backendu Bills
+globs: "backend/tests/**/*.py"
 alwaysApply: false
 ---
-## TESTING
 
-### Guidelines for UNIT
+# Pytest — Bills
 
-#### PYTEST
+Test leży w `backend/tests/unit`, `integration` albo `e2e`. Marker dokłada `tests/conftest.py` według katalogu. Nowego markera spoza `backend/pytest.ini` nie dodajesz.
 
-- Use fixtures for test setup and dependency injection
-- Implement parameterized tests for testing multiple inputs for {{function_types}}
-- Use monkeypatch for mocking dependencies
+## Układ
 
+- `unit` nie dotyka bazy, FastAPI ani sieci. `pytest -n` jest tylko dla `-m unit`.
+- `integration` i `e2e` idą na prawdziwym Postgresie, seryjnie, bez `-n`. Dzielą jedną bazę.
+- Schemat pochodzi z tych samych plików `supabase/migrations` co CI.
+- Fixture `db_session` i `owned` otwierają dane testu. Po teście `owned` kasuje tylko wiersze tego użytkownika.
+- Atrapa zależności to fixture albo `monkeypatch`. Gemini i OCR są `AsyncMock`. Test modelu nie wychodzi w sieć.
+- Wektor w teście katalogu jest zamrożony.
+
+## Przypadki
+
+- Zmiana stanu ma scenariusz, który przechodzi, i scenariusz, który się zatrzymuje.
+- Próg coverage bierz z `backend/pyproject.toml` (`fail_under = 43`). Podniesienie do 80 jest osobną zmianą. Przy A1–A8 tego progu nie ruszasz.
+- Sam `-m unit` nie egzekwuje progu. Pełny przebieg tak.

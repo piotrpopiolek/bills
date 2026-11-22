@@ -1,4 +1,6 @@
 ---
+description: Komponenty Shadcn w astro/src/components/ui
+globs: "astro/src/components/ui/**,astro/components.json"
 alwaysApply: false
 ---
 # Shadcn UI Components
@@ -7,7 +9,7 @@ Ten projekt wykorzystuje @shadcn/ui dla komponentów interfejsu użytkownika. S�
 
 ## Odszukiwanie zainstalowanych komponentów
 
-Komponenty są dostępne w folderze `src/components/ui`, zgodnie z aliasami z pliku `components.json`
+Komponenty są w `astro/src/components/ui`. Alias `@/components/ui` jest w `astro/components.json`. Polecenie `npx shadcn@latest add` odpalasz z katalogu `astro`.
 
 ## Wykorzystanie komponentu
 

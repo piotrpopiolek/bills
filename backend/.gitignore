@@ -32,3 +32,6 @@ __pycache__/
 # Uploads
 uploads/
 
+.cursor/
+.ai/
+

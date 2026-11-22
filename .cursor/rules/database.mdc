@@ -1,13 +1,22 @@
 ---
+description: Model danych Bills w Postgresie
+globs: "supabase/migrations/**/*.sql,backend/**/models.py"
 alwaysApply: false
 ---
 
-## DATABASE
+# Baza — Bills
 
-### Guidelines for SQL
+Postgres 16. Schemat jest w `supabase/migrations`. Testy i CI nakładają te same pliki SQL, w kolejności nazwy. Alembic nie wchodzi.
 
-#### POSTGRES
+## Model
 
-- Use connection pooling to manage database connections efficiently
-- Implement JSONB columns for semi-structured data instead of creating many tables for {{flexible_data}}
-- Use materialized views for complex, frequently accessed read-only data
+- Dane biznesowe są relacyjne. Reguł biznesowych nie zapisuj jako triggerów.
+- JSON jest pomocniczy. Nowy payload JSON ma `schema_version`. `product_indexes.synonyms` zostaje słownikiem JSONB.
+- Kolumna embeddingu na `product_indexes` dochodzi migracją SQL z `create extension if not exists vector`.
+- Dziś serwis testowy to `postgres:16-alpine`. Gdy wchodzi pgvector, obraz to `pgvector/pgvector:pg16`.
+- Pula połączeń zostaje w `Settings` (`DB_POOL_SIZE`, `DB_MAX_OVERFLOW`).
+
+## Migracje
+
+- Nowy plik dokładasz obok istniejących. Zastosowanej migracji nie edytujesz.
+- Rozszerzenia, których używa zapytanie (`pg_trgm`, `vector`), włączasz w migracji.
