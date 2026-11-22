@@ -1,5 +1,7 @@
 import logging
+from contextlib import AbstractAsyncContextManager
 from contextvars import ContextVar
+from types import TracebackType
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,19 +35,24 @@ class SessionContextManager:
     since FastAPI manages the session lifecycle via get_session() yield pattern.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def __aenter__(self) -> AsyncSession:
         return self.session
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool:
         # Don't close or commit - FastAPI manages session lifecycle
         # Just pass through any exceptions
         return False
 
 
-def set_db_session(session: AsyncSession):
+def set_db_session(session: AsyncSession) -> None:
     """Set the database session for the current context."""
     _db_session.set(session)
 
@@ -55,22 +62,22 @@ def get_db_session() -> AsyncSession | None:
     return _db_session.get()
 
 
-def clear_db_session():
+def clear_db_session() -> None:
     """Clear the database session from the current context."""
     _db_session.set(None)
 
 
-def set_storage_service(service: StorageService):
+def set_storage_service(service: StorageService) -> None:
     """Set the storage service for the current context."""
     _storage_service.set(service)
 
 
-def clear_storage_service():
+def clear_storage_service() -> None:
     """Clear the storage service from the current context."""
     _storage_service.set(None)
 
 
-def set_user(user: "User"):
+def set_user(user: "User") -> None:
     """Set the current user for the context."""
     _user.set(user)
 
@@ -80,12 +87,12 @@ def get_user() -> Optional["User"]:
     return _user.get()
 
 
-def clear_user():
+def clear_user() -> None:
     """Clear the current user from context."""
     _user.set(None)
 
 
-def get_or_create_session():
+def get_or_create_session() -> AbstractAsyncContextManager[AsyncSession]:
     """
     Get session from context or create a new one as async context manager.
 
