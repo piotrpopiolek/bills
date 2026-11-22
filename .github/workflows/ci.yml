@@ -38,10 +38,10 @@ jobs:
 
       - uses: ./.github/actions/setup-backend
         with:
-          requirements-file: requirements-lint.txt
+          requirements-file: requirements-dev.txt
 
-      - name: mypy baseline
-        run: python scripts/check_mypy_baseline.py
+      - name: mypy
+        run: mypy src
 
   test:
     name: Test (pytest)

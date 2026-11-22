@@ -32,8 +32,13 @@ mypy_path = "."
 explicit_package_bases = true
 namespace_packages = true
 packages = ["src"]
+plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
 
 [tool.coverage.run]
 branch = true

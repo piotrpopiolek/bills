@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.service import AICategorizationService
 from src.categories.services import CategoryService
-from src.deps import get_db  # Główna funkcja DI dla sesji DB
+from src.db.main import get_session as get_db
 from src.product_index_aliases.services import ProductIndexAliasService
 from src.product_indexes.services import ProductIndexService
 

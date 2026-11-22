@@ -11,6 +11,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 
 from src.ai.schemas import NormalizedItem
 from src.categories.models import Category
+from src.categories.schemas import CategoryResponse
 from src.categories.services import CategoryService
 from src.common.exceptions import ResourceNotFoundError
 from src.config import settings
@@ -23,7 +24,7 @@ from src.product_indexes.services import ProductIndexService
 logger = logging.getLogger(__name__)
 
 
-def _should_retry_gemini_error(exception: Exception) -> bool:
+def _should_retry_gemini_error(exception: BaseException) -> bool:
     """
     Sprawdza, czy błąd Gemini powinien być retryowany.
 
@@ -228,7 +229,7 @@ class AICategorizationService:
         cleaned_text: str,
         category_suggestion: str | None = None,
         shop_name: str | None = None,
-    ) -> Category:
+    ) -> CategoryResponse:
         """
         Przypisuje kategorię do produktu.
 
@@ -244,7 +245,7 @@ class AICategorizationService:
             shop_name: Nazwa sklepu dla kontekstu AI (opcjonalne)
 
         Returns:
-            Category: Przypisana kategoria produktu
+            CategoryResponse: Przypisana kategoria produktu
 
         Most Koncepcyjny (PHP -> Python):
         - W Symfony/Laravel mielibyście podobną logikę w Service Layer (np. OrderService::assignCategory).

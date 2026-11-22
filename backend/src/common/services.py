@@ -1,10 +1,9 @@
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.sql.elements import ColumnElement
 
 from src.common.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError
 from src.common.schemas import AppBaseModel
@@ -25,7 +24,7 @@ class AppService[
         self.session = session
 
     async def get_by_id(self, id: int) -> ModelType:
-        stmt = select(self.model).where(self.model.id == id)
+        stmt = select(self.model).where(cast(Any, self.model).id == id)
         result = await self.session.execute(stmt)
         obj = result.scalar_one_or_none()
 
@@ -38,7 +37,12 @@ class AppService[
         count_stmt = select(func.count()).select_from(self.model)
         count_result = await self.session.execute(count_stmt)
         total = count_result.scalar() or 0
-        stmt = select(self.model).offset(skip).limit(limit).order_by(self.model.id)
+        stmt = (
+            select(self.model)
+            .offset(skip)
+            .limit(limit)
+            .order_by(cast(Any, self.model).id)
+        )
         result = await self.session.execute(stmt)
         return {
             "items": result.scalars().all(),
@@ -48,10 +52,12 @@ class AppService[
         }
 
     async def create(self, data: CreateSchemaType) -> ModelType:
+        model = cast(Any, self.model)
+        payload = cast(Any, data)
         await self._ensure_unique(
             model=self.model,
-            field=self.model.name,
-            value=data.name,
+            field=model.name,
+            value=payload.name,
             resource_name=self.model.__name__,
             field_name="name",
         )
@@ -106,7 +112,7 @@ class AppService[
     async def _ensure_unique(
         self,
         model: type[ModelType],
-        field: ColumnElement,
+        field: Any,
         value: Any,
         resource_name: str,
         field_name: str,
@@ -129,7 +135,7 @@ class AppService[
     async def _ensure_exists(
         self,
         model: type[ModelType],
-        field: ColumnElement,
+        field: Any,
         value: Any,
         resource_name: str,
     ) -> None:
@@ -158,10 +164,11 @@ class AppService[
         Returns:
             True if the IntegrityError is caused by a foreign key violation, False otherwise
         """
-        # asyncpg puts sqlstate in e.orig.sqlstate
-        if hasattr(e.orig, "sqlstate") and e.orig.sqlstate == "23503":
+        orig = e.orig
+        if orig is None:
+            return False
+        if getattr(orig, "sqlstate", None) == "23503":
             return True
-        # psycopg2 puts pgcode in e.orig.pgcode
-        if hasattr(e.orig, "pgcode") and e.orig.pgcode == "23503":
+        if getattr(orig, "pgcode", None) == "23503":
             return True
         return False

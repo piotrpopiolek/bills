@@ -45,7 +45,7 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         response.category_name = category_name
         return response
 
-    async def create(self, data: BillItemCreate) -> BillItemResponse:
+    async def create(self, data: BillItemCreate) -> BillItemResponse:  # type: ignore[override]
         # Bill Existence Check (Referential Integrity check before DB hit)
         await self._ensure_exists(
             model=Bill, field=Bill.id, value=data.bill_id, resource_name="Bill"
@@ -93,7 +93,7 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
 
         return self._to_response(new_bill_item)
 
-    async def update(
+    async def update(  # type: ignore[override]
         self, bill_item_id: int, data: BillItemUpdate, user_id: int | None = None
     ) -> BillItemResponse:
         """
@@ -344,7 +344,9 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
 
         return {"items": items_with_names, "total": total, "skip": skip, "limit": limit}
 
-    async def get_by_id(self, bill_item_id: int) -> BillItemResponse:
+    async def get_by_id(  # type: ignore[override]
+        self, bill_item_id: int
+    ) -> BillItemResponse:
         """
         Get bill item by ID with index and category relationships loaded.
         Overrides base method to add eager loading and convert to response schema.
@@ -409,7 +411,7 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         # Use base class method to get model (not response) for deletion
         bill_item = await super().get_by_id(bill_item_id)
 
-        self.session.delete(bill_item)
+        await self.session.delete(bill_item)
 
         try:
             await self.session.commit()

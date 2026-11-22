@@ -113,7 +113,7 @@ class UserService(AppService[User, UserCreate, UserUpdate]):
     async def delete(self, user_id: int) -> None:
         user = await self.get_by_id(user_id)
 
-        self.session.delete(user)
+        await self.session.delete(user)
 
         try:
             await self.session.commit()

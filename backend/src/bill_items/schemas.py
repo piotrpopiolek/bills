@@ -122,6 +122,8 @@ class BillItemUpdate(AppBaseModel, BillItemValidationMixin):
 
     original_text: str | None = Field(None, description="Original OCR text of the item")
 
+    category_id: int | None = Field(None, gt=0, description="Category ID")
+
     confidence_score: Decimal | None = Field(
         None, ge=0, le=1, description="OCR confidence score"
     )

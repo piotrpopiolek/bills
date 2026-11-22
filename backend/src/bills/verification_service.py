@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bill_items.models import BillItem
+from src.bill_items.schemas import BillItemResponse
 from src.bill_items.services import BillItemService
 from src.bills.models import Bill, ProcessingStatus
 from src.bills.schemas import BillUpdate
@@ -155,7 +156,7 @@ class BillVerificationService:
         user_id: int,
         edited_text: str | None = None,
         edited_category_id: int | None = None,
-    ) -> BillItem:
+    ) -> BillItemResponse:
         """
         Weryfikuje pozycję (używa ProductLearningService.handle_user_bill_item_verification).
 
@@ -203,7 +204,7 @@ class BillVerificationService:
 
         return verified_item
 
-    async def skip_item(self, bill_item_id: int, user_id: int) -> BillItem:
+    async def skip_item(self, bill_item_id: int, user_id: int) -> BillItemResponse:
         """
         Pomija pozycję (nie weryfikuje, tylko zwraca dla informacji).
 
@@ -212,7 +213,7 @@ class BillVerificationService:
             user_id: ID użytkownika
 
         Returns:
-            BillItem: Pozycja (bez zmian)
+            BillItemResponse: Pozycja (bez zmian)
 
         Raises:
             ResourceNotFoundError: Jeśli pozycja nie istnieje

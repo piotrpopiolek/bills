@@ -14,8 +14,8 @@ from collections import Counter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bill_items.models import BillItem, VerificationSource
-from src.bill_items.schemas import BillItemUpdate
+from src.bill_items.models import VerificationSource
+from src.bill_items.schemas import BillItemResponse, BillItemUpdate
 from src.bill_items.services import BillItemService
 from src.bills.models import Bill
 from src.config import settings
@@ -357,7 +357,7 @@ class ProductLearningService:
         user_id: int,
         edited_original_text: str,
         edited_category_id: int | None,
-    ) -> tuple[BillItem, ProductIndex | None]:
+    ) -> tuple[BillItemResponse, ProductIndex | None]:
         """
         Główna metoda obsługująca weryfikację BillItem przez użytkownika.
 

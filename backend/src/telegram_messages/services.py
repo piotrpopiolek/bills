@@ -146,7 +146,7 @@ class TelegramMessageService(
     async def delete(self, message_id: int) -> None:
         message = await self.get_by_id(message_id)
 
-        self.session.delete(message)
+        await self.session.delete(message)
 
         try:
             await self.session.commit()
@@ -193,25 +193,35 @@ class TelegramLoggingService:
             if not content:
                 content = "[Photo]"
         elif msg_type == TelegramMessageType.DOCUMENT:
-            file_id = message.document.file_id
-            if not content:
-                content = f"[Document] {message.document.file_name or ''}"
+            document = message.document
+            if document is not None:
+                file_id = document.file_id
+                if not content:
+                    content = f"[Document] {document.file_name or ''}"
         elif msg_type == TelegramMessageType.VOICE:
-            file_id = message.voice.file_id
-            if not content:
-                content = "[Voice]"
+            voice = message.voice
+            if voice is not None:
+                file_id = voice.file_id
+                if not content:
+                    content = "[Voice]"
         elif msg_type == TelegramMessageType.VIDEO:
-            file_id = message.video.file_id
-            if not content:
-                content = "[Video]"
+            video = message.video
+            if video is not None:
+                file_id = video.file_id
+                if not content:
+                    content = "[Video]"
         elif msg_type == TelegramMessageType.AUDIO:
-            file_id = message.audio.file_id
-            if not content:
-                content = f"[Audio] {message.audio.title or ''}"
+            audio = message.audio
+            if audio is not None:
+                file_id = audio.file_id
+                if not content:
+                    content = f"[Audio] {audio.title or ''}"
         elif msg_type == TelegramMessageType.STICKER:
-            file_id = message.sticker.file_id
-            if not content:
-                content = f"[Sticker] {message.sticker.emoji or ''}"
+            sticker = message.sticker
+            if sticker is not None:
+                file_id = sticker.file_id
+                if not content:
+                    content = f"[Sticker] {sticker.emoji or ''}"
 
         return content, file_id
 

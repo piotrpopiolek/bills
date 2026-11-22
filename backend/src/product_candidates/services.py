@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, and_, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -61,7 +61,7 @@ class ProductCandidateService(
         )
 
         # Filtry
-        conditions = []
+        conditions: list[ColumnElement[bool]] = []
 
         if search:
             conditions.append(ProductCandidate.representative_name.ilike(f"%{search}%"))
@@ -74,9 +74,7 @@ class ProductCandidateService(
 
         # Zastosuj warunki
         if conditions:
-            where_clause = conditions[0]
-            for condition in conditions[1:]:
-                where_clause = where_clause & condition
+            where_clause = and_(*conditions)
             stmt = stmt.where(where_clause)
             count_stmt = count_stmt.where(where_clause)
 
@@ -242,7 +240,7 @@ class ProductCandidateService(
         """
         product_candidate = await self.get_by_id(product_candidate_id)
 
-        self.session.delete(product_candidate)
+        await self.session.delete(product_candidate)
 
         try:
             await self.session.commit()

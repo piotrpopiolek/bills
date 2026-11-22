@@ -32,9 +32,9 @@ OCRServiceDependency = Annotated[OCRService, Depends(get_ocr_service)]
     dependencies=[Depends(check_ocr_rate_limit)],
 )
 async def extract_receipt_data(
+    current_user: CurrentUser,
+    ocr_service: OCRServiceDependency,
     file: UploadFile = File(..., description="Receipt image (JPEG, PNG, WEBP)"),
-    current_user: CurrentUser = ...,
-    ocr_service: OCRServiceDependency = ...,
 ) -> OCRExtractResponse:
     """
     Extract structured data from a receipt image using AI (Gemini).

@@ -209,7 +209,15 @@ async def get_magic_links(
     Returns:
         MagicLinkListResponse with paginated results
     """
-    return await service.get_all(skip=skip, limit=limit)
+    page = await service.get_all(skip=skip, limit=limit)
+    return MagicLinkListResponse(
+        items=[
+            MagicLinkInternalResponse.model_validate(item) for item in page["items"]
+        ],
+        total=page["total"],
+        skip=page["skip"],
+        limit=page["limit"],
+    )
 
 
 @router.get(

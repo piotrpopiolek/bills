@@ -54,7 +54,7 @@ class CategoryService(AppService[Category, CategoryCreate, CategoryUpdate]):
         response.bill_items_count = bill_items_count
         return response
 
-    async def create(self, data: CategoryCreate) -> CategoryResponse:
+    async def create(self, data: CategoryCreate) -> CategoryResponse:  # type: ignore[override]
         await self._ensure_unique(
             model=Category,
             field=Category.name,
@@ -87,8 +87,10 @@ class CategoryService(AppService[Category, CategoryCreate, CategoryUpdate]):
 
         return await self._to_response(new_category)
 
-    async def update(self, category_id: int, data: CategoryUpdate) -> CategoryResponse:
-        category = await self.get_by_id(category_id)
+    async def update(  # type: ignore[override]
+        self, category_id: int, data: CategoryUpdate
+    ) -> CategoryResponse:
+        category = await super().get_by_id(category_id)
 
         update_data = data.model_dump(exclude_unset=True)
 
@@ -139,9 +141,9 @@ class CategoryService(AppService[Category, CategoryCreate, CategoryUpdate]):
 
     async def delete(self, category_id: int) -> None:
 
-        category = await self.get_by_id(category_id)
+        category = await super().get_by_id(category_id)
 
-        self.session.delete(category)
+        await self.session.delete(category)
 
         try:
             await self.session.commit()
@@ -177,7 +179,7 @@ class CategoryService(AppService[Category, CategoryCreate, CategoryUpdate]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def get_fallback_category(self) -> Category:
+    async def get_fallback_category(self) -> CategoryResponse:
         """
         Zwraca kategorię domyślną (fallback) używaną dla nieznanych produktów.
 
@@ -186,7 +188,7 @@ class CategoryService(AppService[Category, CategoryCreate, CategoryUpdate]):
         2. Jeśli nie istnieje, tworzy ją automatycznie
 
         Returns:
-            Category: Kategoria domyślna (np. "Inne")
+            CategoryResponse: Kategoria domyślna (np. "Inne")
 
         """
         fallback_name = settings.AI_FALLBACK_CATEGORY_NAME
@@ -199,15 +201,15 @@ class CategoryService(AppService[Category, CategoryCreate, CategoryUpdate]):
 
         # Jeśli kategoria nie istnieje, utwórz ją
         if not category:
-            from src.categories.schemas import CategoryCreate
-
-            category_data = CategoryCreate(name=fallback_name, parent_id=None)
-            category = await self.create(category_data)
+            created = await self.create(
+                CategoryCreate(name=fallback_name, parent_id=None)
+            )
             logger.info(f"Utworzono kategorię fallback: {fallback_name}")
+            return created
 
-        return category
+        return await self._to_response(category)
 
-    async def get_by_id(self, category_id: int) -> CategoryResponse:
+    async def get_by_id(self, category_id: int) -> CategoryResponse:  # type: ignore[override]
         """
         Get category by ID with counts of related products and bill items.
         Overrides base method to add counting and convert to response schema.

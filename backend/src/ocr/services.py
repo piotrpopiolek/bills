@@ -29,7 +29,7 @@ from src.ocr.schemas import (
 logger = logging.getLogger(__name__)
 
 
-def _should_retry_gemini_error(exception: Exception) -> bool:
+def _should_retry_gemini_error(exception: BaseException) -> bool:
     """
     Sprawdza, czy błąd Gemini powinien być retryowany.
 

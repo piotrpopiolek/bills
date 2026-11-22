@@ -164,12 +164,12 @@ class ReportService:
 
         # Build shops list
         shops: list[ShopSummary] = []
-        for row in shops_rows:
+        for shop_row in shops_rows:
             shops.append(
                 ShopSummary(
-                    shop=ShopInfo(id=row.id, name=row.name),
-                    amount=row.amount or Decimal("0.00"),
-                    bills_count=row.bills_count or 0,
+                    shop=ShopInfo(id=shop_row.id, name=shop_row.name),
+                    amount=shop_row.amount or Decimal("0.00"),
+                    bills_count=shop_row.bills_count or 0,
                 )
             )
 
@@ -482,12 +482,12 @@ class ReportService:
 
         # Build top shops
         top_shops: list[ShopSummary] = []
-        for row in shops_rows:
+        for shop_row in shops_rows:
             top_shops.append(
                 ShopSummary(
-                    shop=ShopInfo(id=row.id, name=row.name),
-                    amount=row.amount or Decimal("0.00"),
-                    bills_count=row.bills_count or 0,
+                    shop=ShopInfo(id=shop_row.id, name=shop_row.name),
+                    amount=shop_row.amount or Decimal("0.00"),
+                    bills_count=shop_row.bills_count or 0,
                 )
             )
 

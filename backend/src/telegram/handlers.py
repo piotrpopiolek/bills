@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -31,6 +32,20 @@ from telegram import CallbackQuery, Update
 from telegram.ext import ContextTypes
 
 logger = logging.getLogger(__name__)
+
+
+def _chat_id(update: Update) -> int:
+    chat = update.effective_chat
+    if chat is None:
+        raise ValueError("Brak czatu w aktualizacji Telegrama")
+    return chat.id
+
+
+def _user_data(context: ContextTypes.DEFAULT_TYPE) -> dict[Any, Any]:
+    data = context.user_data
+    if data is None:
+        raise ValueError("Brak user_data w kontekście Telegrama")
+    return data
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -770,7 +785,7 @@ async def start_bill_verification(
             if not unverified_items:
                 # Wszystkie pozycje już zweryfikowane
                 await context.bot.send_message(
-                    chat_id=update.effective_chat.id,
+                    chat_id=_chat_id(update),
                     text="✅ Wszystkie pozycje zostały już zweryfikowane!",
                 )
                 return
@@ -798,13 +813,13 @@ async def start_bill_verification(
 
             # Wyślij wiadomość
             await context.bot.send_message(
-                chat_id=update.effective_chat.id,
+                chat_id=_chat_id(update),
                 text=message_text,
                 reply_markup=keyboard,
             )
 
-            # Zapisz stan weryfikacji w context.user_data
-            context.user_data["verification"] = {
+            # Zapisz stan weryfikacji w _user_data(context)
+            _user_data(context)["verification"] = {
                 "bill_id": bill_id,
                 "current_item_index": 0,
                 "unverified_item_ids": [item.id for item in unverified_items],
@@ -822,7 +837,7 @@ async def start_bill_verification(
                 exc_info=True,
             )
             await context.bot.send_message(
-                chat_id=update.effective_chat.id,
+                chat_id=_chat_id(update),
                 text="⚠️ Wystąpił błąd podczas rozpoczynania weryfikacji. Spróbuj ponownie później.",
             )
 
@@ -854,7 +869,8 @@ async def handle_item_verification_callback(
 
     # Parsuj callback_data: "verify:{action}:{bill_item_id}"
     try:
-        _, action, bill_item_id_str = query.data.split(":", 2)
+        callback_data = query.data or ""
+        _, action, bill_item_id_str = callback_data.split(":", 2)
         bill_item_id = int(bill_item_id_str)
     except ValueError:
         logger.error(f"Invalid callback data format: {query.data}")
@@ -868,7 +884,7 @@ async def handle_item_verification_callback(
             verification_service = await get_bill_verification_service(session=session)
 
             # Pobierz stan weryfikacji z context
-            verification_state = context.user_data.get("verification", {})
+            verification_state = _user_data(context).get("verification", {})
             bill_id = verification_state.get("bill_id")
 
             if not bill_id:
@@ -902,7 +918,7 @@ async def handle_item_verification_callback(
             elif action == "edit":
                 # Przejdź do trybu edycji
                 verification_state["editing_item_id"] = bill_item_id
-                context.user_data["verification"] = verification_state
+                _user_data(context)["verification"] = verification_state
 
                 await query.edit_message_text(
                     "✏️ Wpisz poprawioną nazwę produktu:\n\n"
@@ -962,14 +978,14 @@ async def handle_item_verification_callback(
 
                 # Wyślij następną pozycję
                 await context.bot.send_message(
-                    chat_id=update.effective_chat.id,
+                    chat_id=_chat_id(update),
                     text=message_text,
                     reply_markup=keyboard,
                 )
 
                 # Zaktualizuj stan (zachowaj bill_id dla kolejnych weryfikacji)
                 verification_state["bill_id"] = bill_id
-                context.user_data["verification"] = verification_state
+                _user_data(context)["verification"] = verification_state
             else:
                 # Sprawdź czy wszystkie pozycje zostały zweryfikowane
                 if await verification_service.check_all_items_verified(
@@ -979,7 +995,7 @@ async def handle_item_verification_callback(
                     await verification_service.finalize_verification(bill_id, user_id)
 
                     await context.bot.send_message(
-                        chat_id=update.effective_chat.id,
+                        chat_id=_chat_id(update),
                         text=(
                             "✅ Weryfikacja zakończona!\n\n"
                             f"Wszystkie pozycje zostały zweryfikowane.\n"
@@ -988,10 +1004,10 @@ async def handle_item_verification_callback(
                     )
 
                     # Wyczyść stan weryfikacji
-                    context.user_data.pop("verification", None)
+                    _user_data(context).pop("verification", None)
                 else:
                     await context.bot.send_message(
-                        chat_id=update.effective_chat.id,
+                        chat_id=_chat_id(update),
                         text="ℹ️ Nie znaleziono więcej pozycji do weryfikacji.",
                     )
 
@@ -1010,7 +1026,7 @@ async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     # Sprawdź czy użytkownik jest w trybie edycji
-    verification_state = context.user_data.get("verification", {})
+    verification_state = _user_data(context).get("verification", {})
     editing_item_id = verification_state.get("editing_item_id")
 
     if not editing_item_id:
@@ -1030,7 +1046,7 @@ async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TY
     # Sprawdź czy to komenda /cancel
     if update.message.text and update.message.text.strip().lower() == "/cancel":
         verification_state["editing_item_id"] = None
-        context.user_data["verification"] = verification_state
+        _user_data(context)["verification"] = verification_state
         await update.message.reply_text("❌ Anulowano edycję.")
         return
 
@@ -1106,14 +1122,14 @@ async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TY
 
                     # Wyślij następną pozycję
                     await context.bot.send_message(
-                        chat_id=update.effective_chat.id,
+                        chat_id=_chat_id(update),
                         text=message_text,
                         reply_markup=keyboard,
                     )
 
                     # Zaktualizuj stan (zachowaj bill_id dla kolejnych weryfikacji)
                     verification_state["bill_id"] = bill_id
-                    context.user_data["verification"] = verification_state
+                    _user_data(context)["verification"] = verification_state
                 else:
                     # Sprawdź czy wszystkie pozycje zostały zweryfikowane
                     if await verification_service.check_all_items_verified(
@@ -1125,7 +1141,7 @@ async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TY
                         )
 
                         await context.bot.send_message(
-                            chat_id=update.effective_chat.id,
+                            chat_id=_chat_id(update),
                             text=(
                                 "✅ Weryfikacja zakończona!\n\n"
                                 f"Wszystkie pozycje zostały zweryfikowane.\n"
@@ -1134,10 +1150,10 @@ async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TY
                         )
 
                         # Wyczyść stan weryfikacji
-                        context.user_data.pop("verification", None)
+                        _user_data(context).pop("verification", None)
                     else:
                         await context.bot.send_message(
-                            chat_id=update.effective_chat.id,
+                            chat_id=_chat_id(update),
                             text="ℹ️ Nie znaleziono więcej pozycji do weryfikacji.",
                         )
 

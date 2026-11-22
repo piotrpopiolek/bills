@@ -12,6 +12,7 @@ from io import BytesIO
 from fastapi import UploadFile
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import Headers
 
 from src.ai.schemas import NormalizedItem
 from src.ai.service import AICategorizationService
@@ -239,7 +240,9 @@ class BillsProcessorService:
 
         # Create UploadFile
         upload_file = UploadFile(
-            file=file_obj, filename=filename, headers={"content-type": mime_type}
+            file=file_obj,
+            filename=filename,
+            headers=Headers({"content-type": mime_type}),
         )
 
         ocr_data = await self.ocr_service.extract_data(upload_file)

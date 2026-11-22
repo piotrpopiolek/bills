@@ -165,7 +165,7 @@ class ProductIndexAliasService(
     async def delete(self, alias_id: int) -> None:
         alias = await self.get_by_id(alias_id)
 
-        self.session.delete(alias)
+        await self.session.delete(alias)
 
         try:
             await self.session.commit()

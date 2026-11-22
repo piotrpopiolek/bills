@@ -283,7 +283,7 @@ class AuthService(AppService[MagicLink, MagicLinkCreate, MagicLinkUpdate]):
         """
         magic_link = await self.get_by_id(magic_link_id)
 
-        self.session.delete(magic_link)
+        await self.session.delete(magic_link)
 
         try:
             await self.session.commit()

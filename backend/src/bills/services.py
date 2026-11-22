@@ -49,7 +49,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
         response.shop_name = shop_name
         return response
 
-    async def create(self, data: BillCreate) -> BillResponse:
+    async def create(self, data: BillCreate) -> BillResponse:  # type: ignore[override]
         # User Existence Check (Referential Integrity check before DB hit)
         await self._ensure_exists(
             model=User, field=User.id, value=data.user_id, resource_name="User"
@@ -94,7 +94,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
 
         return self._to_response(new_bill)
 
-    async def update(
+    async def update(  # type: ignore[override]
         self, bill_id: int, data: BillUpdate, user_id: int
     ) -> BillResponse:
         """
@@ -157,7 +157,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
 
         return self._to_response(bill)
 
-    async def get_by_id(self, bill_id: int) -> BillResponse:
+    async def get_by_id(self, bill_id: int) -> BillResponse:  # type: ignore[override]
         """
         Get bill by ID and generate signed URL for the image.
         Overrides base method to add image_signed_url to response.
@@ -198,7 +198,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
 
         return self._to_response(bill)
 
-    async def get_all(
+    async def get_all(  # type: ignore[override]
         self, user_id: int, skip: int = 0, limit: int = 100
     ) -> dict[str, Any]:
         """
@@ -238,7 +238,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
 
         return {"items": bills_with_urls, "total": total, "skip": skip, "limit": limit}
 
-    async def delete(self, bill_id: int, user_id: int) -> None:
+    async def delete(self, bill_id: int, user_id: int) -> None:  # type: ignore[override]
         """
         Delete bill by ID with user ownership check.
 
@@ -261,7 +261,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
         if bill.user_id != user_id:
             raise BillAccessDeniedError(bill_id)
 
-        self.session.delete(bill)
+        await self.session.delete(bill)
 
         try:
             await self.session.commit()
