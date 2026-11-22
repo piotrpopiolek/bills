@@ -17,8 +17,8 @@ google-generativeai>=0.8.0
 google-api-core>=2.11.0
 passlib[bcrypt]==1.7.4
 pydantic-settings==2.10.1
-pydantic==2.11.7
-pydantic_core==2.33.2
+pydantic==2.13.5
+pydantic_core==2.46.5
 python-dotenv==1.2.2
 PyJWT==2.15.0
 python-multipart==0.0.31
