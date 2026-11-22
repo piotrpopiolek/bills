@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from src.ai.catalog_prompt import build_categorization_prompt
+from src.ai.confidence import normalization_confidence
 from src.ai.schemas import NormalizedItem
 from src.categories.models import Category
 from src.categories.schemas import CategoryResponse
@@ -253,10 +254,10 @@ class AICategorizationService:
         """
         Przypisuje kategorię do produktu.
 
-        Priorytety (zgodnie z planem, sekcja 4.2):
-        1. Jeśli product_index ma category_id → użyj tej kategorii
-        2. Jeśli product_index jest None → użyj AI Categorization (Gemini API)
-        3. W przeciwnym razie → użyj "Inne"
+        Priorytety:
+        1. Jeśli product_index ma istniejącą kategorię, użyj jej.
+        2. W przeciwnym razie zapytaj Gemini, także gdy nazwa jest z katalogu.
+        3. Gdy model nie wskaże kategorii, użyj "Inne".
 
         Args:
             product_index: ProductIndex znaleziony przez normalizację (lub None)
@@ -287,32 +288,28 @@ class AICategorizationService:
                     f"ProductIndex (ID: {product_index.id}) ma nieistniejące category_id: "
                     f"{product_index.category_id}. Przechodzę do AI Categorization."
                 )
-                # Fallback do AI Categorization jeśli kategoria nie istnieje
 
-        # Priorytet 2: AI Categorization (gdy produkt nieznany)
-        if not product_index:
-            available_categories = await self.category_service.get_all_categories()
-            ai_category_id = await self._ai_categorize_product(
-                cleaned_text=cleaned_text,
-                category_suggestion=category_suggestion,
-                shop_name=shop_name,
-                available_categories=available_categories,
-                catalog_hits=catalog_hits or [],
-            )
+        available_categories = await self.category_service.get_all_categories()
+        ai_category_id = await self._ai_categorize_product(
+            cleaned_text=cleaned_text,
+            category_suggestion=category_suggestion,
+            shop_name=shop_name,
+            available_categories=available_categories,
+            catalog_hits=catalog_hits or [],
+        )
 
-            if ai_category_id:
-                # Walidacja: sprawdź czy kategoria rzeczywiście istnieje w DB
-                try:
-                    category = await self.category_service.get_by_id(ai_category_id)
-                    logger.info(
-                        f"AI skategoryzowało produkt '{cleaned_text}' do kategorii ID: {ai_category_id}"
-                    )
-                    return category
-                except ResourceNotFoundError:
-                    logger.warning(
-                        f"AI zwróciło nieistniejące category_id={ai_category_id} dla produktu: "
-                        f"{cleaned_text}. Używam fallback."
-                    )
+        if ai_category_id:
+            try:
+                category = await self.category_service.get_by_id(ai_category_id)
+                logger.info(
+                    f"AI skategoryzowało produkt '{cleaned_text}' do kategorii ID: {ai_category_id}"
+                )
+                return category
+            except ResourceNotFoundError:
+                logger.warning(
+                    f"AI zwróciło nieistniejące category_id={ai_category_id} dla produktu: "
+                    f"{cleaned_text}. Używam fallback."
+                )
 
         # Priorytet 3: Fallback
         fallback_category = await self.category_service.get_fallback_category()
@@ -513,24 +510,15 @@ class AICategorizationService:
             catalog_hits=catalog_hits,
         )
 
-        # Oblicz confidence score na podstawie wyniku normalizacji
         fallback_category = await self.category_service.get_fallback_category()
-        is_fallback = category.id == fallback_category.id
-
-        if product_index:
-            # Produkt znaleziony w słowniku (alias lub fuzzy search)
-            confidence_score = 1.0
-            is_confident = True
-        else:
-            # Produkt nieznany - użyto AI Categorization lub fallback
-            if is_fallback:
-                confidence_score = (
-                    ocr_item.confidence_score * 0.5
-                )  # Unknown product penalty
-                is_confident = False
-            else:
-                confidence_score = ocr_item.confidence_score * 0.7  # AI match penalty
-                is_confident = True
+        confidence_score, is_confident = normalization_confidence(
+            product_category_id=(
+                product_index.category_id if product_index is not None else None
+            ),
+            assigned_category_id=category.id,
+            fallback_category_id=fallback_category.id,
+            ocr_confidence=ocr_item.confidence_score,
+        )
 
         # Efekt normalizacji: znalezienie nazwy produktu lub pozostanie nazwy odczytanej przez OCR
         # Jeśli produkt znaleziony → użyj nazwy z ProductIndex
