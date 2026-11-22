@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     AI_SIMILARITY_THRESHOLD: float = (
         0.75  # Threshold dla fuzzy search (zwiększony z 0.6)
     )
+    AI_VECTOR_SIMILARITY_THRESHOLD: float = 0.85
+    AI_VECTOR_TOP_K: int = 5
     AI_MIN_WORD_LENGTH_STRICT: int = (
         5  # Dla słów krótszych niż 5, wymagany wyższy threshold
     )

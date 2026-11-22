@@ -12,6 +12,7 @@ const scriptPath = path.join(fixturesDir, 'issue_magic_link.py');
 function pythonBin(): string {
   const candidates = [
     path.join(backendDir, '.venv', 'Scripts', 'python.exe'),
+    path.join(backendDir, '.venv', 'bin', 'python'),
     path.join(backendDir, 'venv', 'Scripts', 'python.exe'),
   ];
   return candidates.find((candidate) => existsSync(candidate)) ?? 'python';

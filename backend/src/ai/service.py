@@ -223,6 +223,19 @@ class AICategorizationService:
 
         return row[0] if row else None
 
+    async def _find_by_vector(self, cleaned_text: str) -> ProductIndex | None:
+        """Top-k cosine search. Below the threshold this returns None."""
+        try:
+            query = await self.product_index_service.embed_name(cleaned_text)
+            return await self.product_index_service.search_by_embedding(
+                query,
+                threshold=settings.AI_VECTOR_SIMILARITY_THRESHOLD,
+                top_k=settings.AI_VECTOR_TOP_K,
+            )
+        except Exception as exc:
+            logger.warning("Wyszukiwanie wektorowe nie doszło do skutku: %s", exc)
+            return None
+
     async def _assign_category(
         self,
         product_index: ProductIndex | None,
@@ -472,27 +485,29 @@ Zwróć odpowiedź w formacie JSON:
 
         # Step 1: Wyszukiwanie w aliasach (priorytet: User+Shop -> Shop -> Global)
         product_index = await self._find_by_alias(cleaned_text, shop_id, user_id)
+        found_by_alias = product_index is not None
 
-        # Step 2: Fuzzy Search (jeśli alias nie znaleziony)
-        if not product_index:
+        # Step 2: top-k po wektorze. Powyżej progu bierzemy nazwę z katalogu.
+        if product_index is None:
+            product_index = await self._find_by_vector(cleaned_text)
+
+        # Step 3: Fuzzy search, gdy alias i wektor nie wystarczyły.
+        if product_index is None:
             product_index = await self._fuzzy_search_product(
                 cleaned_text,
-                ocr_item.category_suggestion,  # Opcjonalne filtrowanie
+                ocr_item.category_suggestion,
             )
 
-            # Zapis aliasu po znalezieniu przez fuzzy search (uczenie się systemu)
-            if product_index and save_alias:
-                try:
-                    await self.alias_service.upsert_alias(
-                        raw_name=cleaned_text,
-                        index_id=product_index.id,
-                        shop_id=shop_id,
-                        user_id=user_id,
-                    )
-                except Exception as e:
-                    # Log error, ale nie przerywaj procesu
-                    # (alias nie jest krytyczny dla normalizacji)
-                    logger.error(f"Błąd zapisu aliasu: {str(e)}")
+        if product_index and save_alias and not found_by_alias:
+            try:
+                await self.alias_service.upsert_alias(
+                    raw_name=cleaned_text,
+                    index_id=product_index.id,
+                    shop_id=shop_id,
+                    user_id=user_id,
+                )
+            except Exception as e:
+                logger.error(f"Błąd zapisu aliasu: {str(e)}")
 
         # Kategoryzacja (osobny proces) - zgodnie z planem sekcja 4
         # KRYTYCZNE: Ta operacja jest POZA transakcją DB (wywołania API mogą trwać sekundy)

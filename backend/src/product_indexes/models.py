@@ -17,6 +17,8 @@ PRODUCT_INDEX_EMBEDDING_DIMENSIONS = 768
 class ProductNameEmbedding(Vector):
     """Hand asyncpg a list and cast it to vector(768)."""
 
+    cache_ok = True
+
     def bind_processor(self, dialect: Dialect) -> Any:
         def process(value: list[float] | None) -> list[float] | None:
             return value

@@ -74,6 +74,18 @@ async def test_existing_name_does_not_embed_again() -> None:
     assert embedder.calls == []
 
 
+async def test_existing_row_without_embedding_is_backfilled() -> None:
+    existing = ProductIndex(id=4, name="Mleko 3.2%", embedding=None)
+    embedder = FrozenProductNameEmbedder()
+    service = ProductIndexService(_session(existing=existing), embedder)
+
+    found = await service.create_or_get_existing(ProductIndexCreate(name="mleko 3.2%"))
+
+    assert found is existing
+    assert found.embedding == FROZEN_PRODUCT_EMBEDDING
+    assert embedder.calls == ["Mleko 3.2%"]
+
+
 async def test_renaming_recomputes_the_embedding() -> None:
     existing = ProductIndex(id=4, name="Mleko", embedding=[0.0] * 768)
     embedder = FrozenProductNameEmbedder()

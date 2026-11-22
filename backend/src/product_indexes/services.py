@@ -1,3 +1,5 @@
+from typing import cast
+
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +39,53 @@ class ProductIndexService(
                 f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
             )
         return vector
+
+    async def embed_name(self, name: str) -> list[float]:
+        return await self._embedding_for(name)
+
+    async def _backfill_embedding(self, product: ProductIndex) -> ProductIndex:
+        if product.embedding is not None:
+            return product
+        product.embedding = await self._embedding_for(product.name)
+        try:
+            await self.session.commit()
+            await self.session.refresh(product)
+        except IntegrityError as e:
+            await self.session.rollback()
+            raise e
+        return product
+
+    async def search_by_embedding(
+        self,
+        query: list[float],
+        *,
+        threshold: float,
+        top_k: int,
+    ) -> ProductIndex | None:
+        """Nearest catalog name at or above the cosine similarity threshold."""
+        if len(query) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
+            raise EmbeddingError(
+                f"Embedding ma {len(query)} wymiarów, "
+                f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
+            )
+        if top_k < 1:
+            return None
+        distance = ProductIndex.embedding.cosine_distance(query)
+        similarity = (1 - distance).label("similarity")
+        stmt = (
+            select(ProductIndex, similarity)
+            .where(ProductIndex.embedding.is_not(None))
+            .order_by(distance.asc())
+            .limit(top_k)
+        )
+        rows = (await self.session.execute(stmt)).all()
+        if not rows:
+            return None
+        product = cast(ProductIndex, rows[0][0])
+        score = rows[0][1]
+        if score is None or float(score) < threshold:
+            return None
+        return product
 
     async def _ensure_unique_name(
         self, name: str, exclude_id: int | None = None
@@ -175,7 +224,7 @@ class ProductIndexService(
         existing = result.scalar_one_or_none()
 
         if existing:
-            return existing
+            return await self._backfill_embedding(existing)
 
         embedding = await self._embedding_for(data.name)
         new_product_index = ProductIndex(
@@ -197,7 +246,7 @@ class ProductIndexService(
             result = await self.session.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
-                return existing
+                return await self._backfill_embedding(existing)
             raise e
 
         return new_product_index
