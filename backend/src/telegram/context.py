@@ -2,7 +2,7 @@ import logging
 from contextlib import AbstractAsyncContextManager
 from contextvars import ContextVar
 from types import TracebackType
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +23,7 @@ _storage_service: ContextVar[StorageService | None] = ContextVar(
 )
 
 # Context variable to store current authenticated user per-request
-_user: ContextVar[Optional["User"]] = ContextVar("user", default=None)
+_user: ContextVar[User | None] = ContextVar("user", default=None)
 
 
 class SessionContextManager:
@@ -77,12 +77,12 @@ def clear_storage_service() -> None:
     _storage_service.set(None)
 
 
-def set_user(user: "User") -> None:
+def set_user(user: User) -> None:
     """Set the current user for the context."""
     _user.set(user)
 
 
-def get_user() -> Optional["User"]:
+def get_user() -> User | None:
     """Get the current user from context."""
     return _user.get()
 

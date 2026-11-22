@@ -38,7 +38,7 @@ class OCRReceiptData(AppBaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_total_amount(self) -> "OCRReceiptData":
+    def validate_total_amount(self) -> OCRReceiptData:
         """
         Dwupoziomowa walidacja sumy pozycji vs total_amount.
 
