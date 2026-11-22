@@ -10,13 +10,13 @@ Gałąź CI to `master`. `ci.yml` reaguje na push, pull request i `workflow_disp
 
 ## Security Audit
 
-[`.github/workflows/security.yml`](.github/workflows/security.yml) odpala `pip-audit` w poniedziałek o 08:00 UTC i ręcznie. Do podbicia interpretera Python to `3.13` i plik `requirements.txt`. Po Pythonie 3.14 wersja w tym pliku to `3.14`. Po uv audyt idzie na locku. Job `pip-audit` w `ci.yml` zostaje.
+[`.github/workflows/security.yml`](.github/workflows/security.yml) odpala `pip-audit` w poniedziałek o 08:00 UTC i ręcznie. Python to `3.14`, audyt idzie po `requirements.txt`. Po uv audyt idzie na locku. Job `pip-audit` w `ci.yml` zostaje.
 
 ## Backend
 
 Wspólny setup to [`.github/actions/setup-backend`](.github/actions/setup-backend/action.yml).
 
-- Do podbicia interpretera Python w tej akcji i w jobie `pip-audit` to `3.13`. Po punkcie Python 3.14 obie wartości to `3.14`.
+- Python w akcji `setup-backend`, w jobie `pip-audit` i w `security.yml` to `3.14`.
 - Do przepięcia na uv joby wołają `pip install -r` wskazany plik requirements. Po nim robią `uv sync --frozen`, a `pip-audit` idzie na locku. uv ma przypiętą wersję.
 - `lint` odpala `ruff check` i `ruff format --check`. Linia ma 88 znaków.
 - `typecheck` instaluje `requirements-dev.txt` i odpala `mypy src`. `backend/pyproject.toml` ma `strict = true`.
