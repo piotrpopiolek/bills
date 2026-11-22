@@ -40,7 +40,7 @@ RUN sed -i 's/\r$//' /prestart.sh && chmod +x /prestart.sh
 EXPOSE 8000
 
 # Create entrypoint script that runs migrations then starts the app.
-# python:3.13-slim has /bin/sh, not bash.
+# python:3.14-slim has /bin/sh, not bash.
 RUN printf '%s\n' '#!/bin/sh' 'set -e' '/prestart.sh' 'exec uvicorn main:app --host 0.0.0.0 --port 8000' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
