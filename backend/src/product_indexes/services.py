@@ -8,7 +8,7 @@ from src.categories.models import Category
 from src.common.exceptions import ResourceAlreadyExistsError
 from src.common.services import AppService
 from src.product_indexes.catalog import CatalogHit
-from src.product_indexes.embeddings import ProductNameEmbedder
+from src.product_indexes.embeddings import EmbeddingTask, ProductNameEmbedder
 from src.product_indexes.exceptions import EmbeddingError
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS, ProductIndex
 from src.product_indexes.schemas import ProductIndexCreate, ProductIndexUpdate
@@ -32,8 +32,10 @@ class ProductIndexService(
             self._embedder = GeminiProductNameEmbedder()
         return self._embedder
 
-    async def _embedding_for(self, name: str) -> list[float]:
-        vector = await self._name_embedder().embed_name(name)
+    async def _embedding_for(
+        self, name: str, *, task_type: EmbeddingTask = "retrieval_document"
+    ) -> list[float]:
+        vector = await self._name_embedder().embed_name(name, task_type=task_type)
         if len(vector) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
             raise EmbeddingError(
                 f"Embedding ma {len(vector)} wymiarów, "
@@ -42,18 +44,15 @@ class ProductIndexService(
         return vector
 
     async def embed_name(self, name: str) -> list[float]:
-        return await self._embedding_for(name)
+        """Embed an OCR query. Catalog rows stay retrieval_document."""
+        return await self._embedding_for(name, task_type="retrieval_query")
 
     async def _backfill_embedding(self, product: ProductIndex) -> ProductIndex:
+        """Store a missing embedding without committing the shared session."""
         if product.embedding is not None:
             return product
         product.embedding = await self._embedding_for(product.name)
-        try:
-            await self.session.commit()
-            await self.session.refresh(product)
-        except IntegrityError as e:
-            await self.session.rollback()
-            raise e
+        await self.session.flush([product])
         return product
 
     async def nearest_catalog(

@@ -48,6 +48,7 @@ async def test_create_stores_the_frozen_embedding() -> None:
     created = await service.create(ProductIndexCreate(name="Mleko 3.2%"))
 
     assert embedder.calls == ["Mleko 3.2%"]
+    assert embedder.tasks == ["retrieval_document"]
     assert created.embedding == FROZEN_PRODUCT_EMBEDDING
     session.add.assert_called_once_with(created)
 
@@ -77,13 +78,26 @@ async def test_existing_name_does_not_embed_again() -> None:
 async def test_existing_row_without_embedding_is_backfilled() -> None:
     existing = ProductIndex(id=4, name="Mleko 3.2%", embedding=None)
     embedder = FrozenProductNameEmbedder()
-    service = ProductIndexService(_session(existing=existing), embedder)
+    session = _session(existing=existing)
+    service = ProductIndexService(session, embedder)
 
     found = await service.create_or_get_existing(ProductIndexCreate(name="mleko 3.2%"))
 
     assert found is existing
     assert found.embedding == FROZEN_PRODUCT_EMBEDDING
     assert embedder.calls == ["Mleko 3.2%"]
+    assert embedder.tasks == ["retrieval_document"]
+    session.flush.assert_awaited_once_with([existing])
+    session.commit.assert_not_called()
+
+
+async def test_receipt_query_uses_retrieval_query() -> None:
+    embedder = FrozenProductNameEmbedder()
+    service = ProductIndexService(AsyncMock(), embedder)
+
+    await service.embed_name("MLEKO 3.2%")
+
+    assert embedder.tasks == ["retrieval_query"]
 
 
 async def test_renaming_recomputes_the_embedding() -> None:
@@ -139,10 +153,14 @@ async def test_injected_embedder_never_calls_gemini(
         seen.update(kwargs)
         return {"embedding": FROZEN_PRODUCT_EMBEDDING}
 
-    vector = await GeminiProductNameEmbedder(embed=embed).embed_name("Mleko 3.2%")
-
-    assert vector == FROZEN_PRODUCT_EMBEDDING
-    assert seen["content"] == "Mleko 3.2%"
+    embedder = GeminiProductNameEmbedder(embed=embed)
+    stored = await embedder.embed_name("Mleko 3.2%")
+    assert stored == FROZEN_PRODUCT_EMBEDDING
     assert seen["task_type"] == "retrieval_document"
+
+    query = await embedder.embed_name("Mleko 3.2%", task_type="retrieval_query")
+    assert query == FROZEN_PRODUCT_EMBEDDING
+    assert seen["content"] == "Mleko 3.2%"
+    assert seen["task_type"] == "retrieval_query"
     assert seen["output_dimensionality"] == PRODUCT_INDEX_EMBEDDING_DIMENSIONS
     assert seen["model"] == settings.GEMINI_EMBEDDING_MODEL

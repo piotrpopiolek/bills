@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-from src.ai.catalog_prompt import build_categorization_prompt
+from src.ai.catalog_prompt import build_categorization_prompt, hits_for_categorization
 from src.ai.confidence import normalization_confidence
 from src.ai.schemas import NormalizedItem
 from src.categories.models import Category
@@ -295,7 +295,10 @@ class AICategorizationService:
             category_suggestion=category_suggestion,
             shop_name=shop_name,
             available_categories=available_categories,
-            catalog_hits=catalog_hits or [],
+            catalog_hits=hits_for_categorization(
+                product_index.name if product_index is not None else None,
+                catalog_hits or [],
+            ),
         )
 
         if ai_category_id:

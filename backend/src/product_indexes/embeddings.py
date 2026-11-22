@@ -1,11 +1,13 @@
-from typing import Protocol
+from typing import Literal, Protocol
 
 from src.product_indexes.exceptions import EmbeddingError
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS
 
+EmbeddingTask = Literal["retrieval_document", "retrieval_query"]
+
 
 class ProductNameEmbedder(Protocol):
-    async def embed_name(self, name: str) -> list[float]:
+    async def embed_name(self, name: str, *, task_type: EmbeddingTask) -> list[float]:
         """Return a 768-dimensional embedding of a product name."""
 
 

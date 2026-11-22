@@ -6,7 +6,7 @@ from google.api_core import exceptions as google_exceptions
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from src.config import settings
-from src.product_indexes.embeddings import embedding_values
+from src.product_indexes.embeddings import EmbeddingTask, embedding_values
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS
 
 logger = logging.getLogger(__name__)
@@ -34,11 +34,14 @@ class GeminiProductNameEmbedder:
     ) -> None:
         self._embed = embed
 
-    async def embed_name(self, name: str) -> list[float]:
-        vector = embedding_values(await self._request(name))
+    async def embed_name(
+        self, name: str, *, task_type: EmbeddingTask = "retrieval_document"
+    ) -> list[float]:
+        vector = embedding_values(await self._request(name, task_type))
         logger.info(
-            "Embedded product name with %s (%s dimensions).",
+            "Embedded product name with %s (%s, %s dimensions).",
             settings.GEMINI_EMBEDDING_MODEL,
+            task_type,
             len(vector),
         )
         return vector
@@ -49,12 +52,12 @@ class GeminiProductNameEmbedder:
         retry=retry_if_exception(_should_retry_embedding_error),
         reraise=True,
     )
-    async def _request(self, name: str) -> object:
+    async def _request(self, name: str, task_type: EmbeddingTask) -> object:
         embed = self._embed or _gemini_embed_content
         return await embed(
             model=settings.GEMINI_EMBEDDING_MODEL,
             content=name,
-            task_type="retrieval_document",
+            task_type=task_type,
             output_dimensionality=PRODUCT_INDEX_EMBEDDING_DIMENSIONS,
             request_options={"timeout": settings.GEMINI_TIMEOUT},
         )

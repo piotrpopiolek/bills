@@ -24,8 +24,11 @@ class NamedEmbedder(FrozenProductNameEmbedder):
         super().__init__()
         self._vectors = vectors
 
-    async def embed_name(self, name: str) -> list[float]:
+    async def embed_name(
+        self, name: str, *, task_type: str = "retrieval_document"
+    ) -> list[float]:
         self.calls.append(name)
+        self.tasks.append(task_type)
         return list(self._vectors[name])
 
 

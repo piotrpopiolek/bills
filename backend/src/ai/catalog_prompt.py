@@ -35,6 +35,18 @@ Zwróć odpowiedź w formacie JSON:
 )
 
 
+def hits_for_categorization(
+    product_name: str | None, hits: list[CatalogHit]
+) -> list[CatalogHit]:
+    """Keep the matched catalog name in the prompt when vector hits are empty."""
+    if product_name is None or any(hit.name == product_name for hit in hits):
+        return list(hits)
+    return [
+        CatalogHit(name=product_name, category_name=None, similarity=1.0),
+        *hits,
+    ]
+
+
 def build_categorization_prompt(
     *,
     cleaned_text: str,
