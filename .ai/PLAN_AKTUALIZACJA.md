@@ -85,9 +85,7 @@
 - **Status:** Ukończone
 - **Priorytet:** Wysoki
 - **Założenia MVP:**
-  - Implementacja oparta na modelach LLM (Gemini 1.5 Flash)
-  - Szybsze do wdrożenia, wystarczające dla MVP
-  - Pełny OCR z PaddlePaddle zostanie zaimplementowany po MVP (patrz sekcja "🟢 Nice to have")
+  - Implementacja oparta na modelach LLM (Gemini)
 - **Zaimplementowane:**
   - ✅ `backend/src/ocr/services.py` - `OCRService` z metodą `extract_data()`
   - ✅ Integracja z Gemini API (Google Generative AI)
@@ -236,22 +234,6 @@
   - Dodać walidację sum (items total = bill total)
 - **Szacunek:** 2-3h
 
-### 7.2. PaddlePaddle OCR (Post-MVP)
-
-- **Status:** Zaplanowane po MVP
-- **Priorytet:** Niski (ulepszenie po MVP)
-- **Założenia:**
-  - Zastąpi LLM-based OCR po zakończeniu MVP
-  - Lepsza dokładność i kontrola nad procesem OCR
-  - Możliwość lokalnego przetwarzania (offline)
-- **Zadania:**
-  - Integracja z PaddlePaddle-OCR
-  - Dodać preprocessing obrazów (deskewing, denoising, contrast enhancement)
-  - Dodać post-processing (confidence scoring, text cleaning)
-  - Migracja z LLM-based OCR do PaddlePaddle
-  - Zachować kompatybilność API (abstrakcja OCR Service)
-- **Szacunek:** 8-10h
-
 ---
 
 ## 📋 Rekomendowany plan działania
@@ -351,6 +333,6 @@
 5. 🟢 Security enhancements - **Nice to have**
 6. 🟢 Testy jednostkowe i integracyjne - **Nice to have**
 
-**Uwaga:** OCR Service został zaimplementowany z użyciem Gemini API (podobne rozwiązanie LLM-based jak planowane OpenAI Vision API). Pełny OCR z PaddlePaddle zostanie zaimplementowany po MVP jako ulepszenie.
+**Uwaga:** OCR Service używa Gemini API.
 
 **Uwaga:** File upload dla POST /bills nie jest wymagany - wszystkie zdjęcia paragonów są przesyłane przez Telegram Bot (zaimplementowane w 3.4).

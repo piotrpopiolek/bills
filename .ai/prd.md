@@ -11,7 +11,7 @@ Ręczne śledzenie codziennych wydatków jest czasochłonne, podatne na błędy 
 ## 3. Wymagania funkcjonalne
 
 - F-01: Integracja z botem na Telegramie: Użytkownicy mogą wchodzić w interakcję z aplikacją za pośrednictwem bota, wysyłając zdjęcia paragonów i używając prostych komend tekstowych.
-- F-02: Przetwarzanie paragonów: System automatycznie przetwarza obrazy paragonów przy użyciu technologii OCR (Google Gemini API - LLM-based extraction) w celu ekstrakcji poszczególnych pozycji. W przyszłości planowane jest użycie PaddlePaddle-OCR dla obniżenia kosztów.
+- F-02: Przetwarzanie paragonów: System automatycznie przetwarza obrazy paragonów przy użyciu Gemini API w celu ekstrakcji poszczególnych pozycji.
 - F-03: Kategoryzacja i Normalizacja AI: Wykorzystanie modeli AI (OpenAI) do przypisywania każdej pozycji z paragonu do predefiniowanej kategorii oraz normalizacji nazwy produktu w oparciu o wewnętrzny "słownik produktów".
 - F-04: Weryfikacja przez użytkownika: Pozycje, których system nie jest pewien, są prezentowane użytkownikowi w Telegramie w formie prostego interfejsu z przyciskami do potwierdzenia lub odrzucenia sugestii.
 - F-05: Walidacja sumy: System sprawdza poprawność odczytu, porównując sumę wartości wszystkich pozycji z kwotą końcową widoczną na paragonie.
