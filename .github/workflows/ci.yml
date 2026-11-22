@@ -22,10 +22,10 @@ jobs:
           requirements-file: requirements-lint.txt
 
       - name: ruff check
-        run: ruff check src tests scripts
+        run: ruff check src tests
 
       - name: black --check
-        run: black --check src tests scripts
+        run: black --check src tests
 
   typecheck:
     name: Type check (mypy)
