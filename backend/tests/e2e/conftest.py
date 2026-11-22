@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 @pytest.fixture
 async def api_client(db_engine: AsyncEngine):
     from main import app
-    from tests.support import session_factory
+    from tests.database import session_factory
 
     from src.db.main import get_session
     from src.storage.service import get_storage_service

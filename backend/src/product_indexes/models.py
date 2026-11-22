@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy import DateTime, Dialect, ForeignKey, Index, Integer, String, cast, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -12,6 +12,20 @@ from sqlalchemy.sql import func
 from src.db.main import Base
 
 PRODUCT_INDEX_EMBEDDING_DIMENSIONS = 768
+
+
+class ProductNameEmbedding(Vector):
+    """Hand asyncpg a list and cast it to vector(768)."""
+
+    def bind_processor(self, dialect: Dialect) -> Any:
+        def process(value: list[float] | None) -> list[float] | None:
+            return value
+
+        return process
+
+    def bind_expression(self, bindvalue: Any) -> Any:
+        return cast(bindvalue, self)
+
 
 if TYPE_CHECKING:
     from src.bill_items.models import BillItem
@@ -77,7 +91,7 @@ class ProductIndex(Base):
         Integer, ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True
     )
     embedding: Mapped[list[float] | None] = mapped_column(
-        Vector(PRODUCT_INDEX_EMBEDDING_DIMENSIONS), nullable=True
+        ProductNameEmbedding(PRODUCT_INDEX_EMBEDDING_DIMENSIONS), nullable=True
     )
     category: Mapped[Category | None] = relationship(
         "Category", back_populates="product_indexes"

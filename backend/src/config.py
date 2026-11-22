@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     OPENAI_TIMEOUT: int = 30  # Timeout w sekundach
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-2.5-flash"  # Domyślny model
+    # Output size must stay 768, matching product_indexes.embedding.
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
     GEMINI_TIMEOUT: int = 30  # Timeout w sekundach
 
     # JWT Authentication

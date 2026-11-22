@@ -74,7 +74,7 @@ def _kind_for(path: str) -> str:
 
 @pytest.fixture
 async def db_engine():
-    from tests.support import create_test_engine
+    from tests.database import create_test_engine
 
     engine = create_test_engine()
     try:
@@ -85,7 +85,7 @@ async def db_engine():
 
 @pytest.fixture
 async def db_session(db_engine):
-    from tests.support import session_factory
+    from tests.database import session_factory
 
     maker = session_factory(db_engine)
     async with maker() as session:

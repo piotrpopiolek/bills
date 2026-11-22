@@ -1,17 +1,11 @@
 """Postgres helpers for integration and e2e. Unit tests do not import this."""
 
-import os
 from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.schemas import NormalizedItem
 from src.auth.models import MagicLink
@@ -27,23 +21,10 @@ from src.shops.services import ShopService
 from src.users.models import User
 from src.users.services import UserService
 
-# Local Compose publishes Postgres on 5433. CI sets TEST_DATABASE_URL or DATABASE_URL.
-COMPOSE_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/postgres"
 RAW_SHOP_ADDRESS = "UL. Akacjowa 1, 62-023 Gądki; ul. Inna 9, 00-001 Warszawa"
 NORMALIZED_SHOP_ADDRESS = "ul. akacjowa 1 62-023 gądki"
 RECEIPT_TOTAL = Decimal("12.50")
 RECEIPT_ITEM = "MLEKO 3.2%"
-
-
-def test_database_url() -> str:
-    raw = (
-        os.environ.get("TEST_DATABASE_URL")
-        or os.environ.get("DATABASE_URL")
-        or COMPOSE_DATABASE_URL
-    )
-    if raw.startswith("postgresql://"):
-        return raw.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return raw
 
 
 def normalized_shop_name(external_id: int) -> str:
@@ -52,14 +33,6 @@ def normalized_shop_name(external_id: int) -> str:
 
 def quoted_shop_name(external_id: int) -> str:
     return f'"SKLEP QA {external_id}" S.A.'
-
-
-def create_test_engine() -> AsyncEngine:
-    return create_async_engine(test_database_url(), pool_pre_ping=True, echo=False)
-
-
-def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
-    return async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def delete_shop_by_name(session: AsyncSession, name: str) -> None:

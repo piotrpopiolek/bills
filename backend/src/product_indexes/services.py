@@ -5,15 +5,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.categories.models import Category
 from src.common.exceptions import ResourceAlreadyExistsError
 from src.common.services import AppService
-from src.product_indexes.models import ProductIndex
+from src.product_indexes.embeddings import ProductNameEmbedder
+from src.product_indexes.exceptions import EmbeddingError
+from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS, ProductIndex
 from src.product_indexes.schemas import ProductIndexCreate, ProductIndexUpdate
 
 
 class ProductIndexService(
     AppService[ProductIndex, ProductIndexCreate, ProductIndexUpdate]
 ):
-    def __init__(self, session: AsyncSession):
+    def __init__(
+        self,
+        session: AsyncSession,
+        embedder: ProductNameEmbedder | None = None,
+    ):
         super().__init__(model=ProductIndex, session=session)
+        self._embedder = embedder
+
+    def _name_embedder(self) -> ProductNameEmbedder:
+        if self._embedder is None:
+            from src.product_indexes.gemini_embedding import GeminiProductNameEmbedder
+
+            self._embedder = GeminiProductNameEmbedder()
+        return self._embedder
+
+    async def _embedding_for(self, name: str) -> list[float]:
+        vector = await self._name_embedder().embed_name(name)
+        if len(vector) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
+            raise EmbeddingError(
+                f"Embedding ma {len(vector)} wymiarów, "
+                f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
+            )
+        return vector
 
     async def _ensure_unique_name(
         self, name: str, exclude_id: int | None = None
@@ -46,9 +69,12 @@ class ProductIndexService(
         # Uniqueness Check (case-insensitive name)
         await self._ensure_unique_name(data.name)
 
-        # Object Construction
+        embedding = await self._embedding_for(data.name)
         new_product_index = ProductIndex(
-            name=data.name, synonyms=data.synonyms, category_id=data.category_id
+            name=data.name,
+            synonyms=data.synonyms,
+            category_id=data.category_id,
+            embedding=embedding,
         )
 
         # Persistence (Unit of Work)
@@ -92,11 +118,10 @@ class ProductIndexService(
                     resource_name="Category",
                 )
 
-        # Uniqueness Check (if name is being updated)
-        if "name" in update_data and update_data["name"] != product_index.name:
-            await self._ensure_unique_name(
-                update_data["name"], exclude_id=product_index.id
-            )
+        new_name = update_data.get("name")
+        if isinstance(new_name, str) and new_name != product_index.name:
+            await self._ensure_unique_name(new_name, exclude_id=product_index.id)
+            update_data["embedding"] = await self._embedding_for(new_name)
 
         # Apply updates
         for key, value in update_data.items():
@@ -152,9 +177,12 @@ class ProductIndexService(
         if existing:
             return existing
 
-        # Utwórz nowy ProductIndex
+        embedding = await self._embedding_for(data.name)
         new_product_index = ProductIndex(
-            name=data.name, synonyms=data.synonyms, category_id=data.category_id
+            name=data.name,
+            synonyms=data.synonyms,
+            category_id=data.category_id,
+            embedding=embedding,
         )
 
         # Persistence (Unit of Work)

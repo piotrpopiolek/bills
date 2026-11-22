@@ -22,7 +22,7 @@ engine = create_async_engine(
 
 
 def _register_vector(dbapi_connection: Any, _connection_record: Any) -> None:
-    """Teach asyncpg the vector type. The database must already have the extension."""
+    """Register pgvector's binary codec. The column type passes lists through."""
     dbapi_connection.run_async(register_vector)
 
 
