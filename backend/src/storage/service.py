@@ -124,7 +124,9 @@ class StorageService:
             response = self.supabase_client.storage.from_(
                 bucket_name
             ).create_signed_url(path=file_path, expires_in=expiry_seconds)
-            signed_url = response.get("signedURL") if isinstance(response, dict) else None
+            signed_url = (
+                response.get("signedURL") if isinstance(response, dict) else None
+            )
             return signed_url or ""
         except Exception as e:
             logger.error(f"Failed to generate signed URL: {e}", exc_info=True)

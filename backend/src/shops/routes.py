@@ -46,9 +46,7 @@ async def get_shops(
     status_code=status.HTTP_200_OK,
     summary="Get shop by ID",
 )
-async def get_shop(
-    shop_id: int, user: CurrentUser, service: ServiceDependency
-) -> Shop:
+async def get_shop(shop_id: int, user: CurrentUser, service: ServiceDependency) -> Shop:
     """
     Get shop by ID.
     Requires authentication.

@@ -102,7 +102,9 @@ async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await update.message.reply_text("Wystąpił błąd podczas generowania linku.")
 
 
-async def daily_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def daily_report_command(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """
     Handle /dzis command - generate daily expense report.
 
@@ -162,7 +164,9 @@ async def daily_report_command(update: Update, context: ContextTypes.DEFAULT_TYP
             await update.message.reply_text(get_user_message(e))
 
 
-async def weekly_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def weekly_report_command(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """
     Handle /tydzien command - generate weekly expense report.
 
@@ -268,7 +272,9 @@ async def privacy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update.message.reply_text(privacy_text)
 
 
-async def monthly_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def monthly_report_command(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """
     Handle /miesiac command - generate monthly expense report.
 
@@ -483,7 +489,9 @@ async def _mark_receipt_processing_failed(
         )
 
 
-async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_receipt_image(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """
     Handle incoming receipt images.
     Orchestrates the process: Auth -> Download -> Upload -> Create Bill Record.
@@ -1019,7 +1027,9 @@ async def handle_item_verification_callback(
             )
 
 
-async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_item_edit_text(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """
     Obsługuje edycję tekstu pozycji (gdy użytkownik jest w trybie edycji).
     """

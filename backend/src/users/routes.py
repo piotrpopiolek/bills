@@ -96,9 +96,7 @@ async def get_users(
     status_code=status.HTTP_200_OK,
     summary="Get user by ID",
 )
-async def get_user(
-    user_id: int, user: CurrentUser, service: ServiceDependency
-) -> User:
+async def get_user(user_id: int, user: CurrentUser, service: ServiceDependency) -> User:
     """
     Get user by ID.
     Requires authentication.
