@@ -6,7 +6,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class UserValidationMixin:
-
     @field_validator("external_id", check_fields=False)
     @classmethod
     def validate_external_id(cls, v: int | None) -> int | None:
@@ -24,7 +23,6 @@ class UserValidationMixin:
 
 # --- BASE MODEL ---
 class UserBase(AppBaseModel, UserValidationMixin):
-
     external_id: int = Field(
         ...,
         gt=0,
@@ -39,7 +37,6 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(AppBaseModel, UserValidationMixin):
-
     external_id: int | None = Field(
         None, gt=0, description="Telegram user ID (typically should not be changed)"
     )

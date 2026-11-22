@@ -7,7 +7,6 @@ from src.telegram_messages.models import TelegramMessageStatus, TelegramMessageT
 
 
 class TelegramMessageValidationMixin:
-
     @field_validator("telegram_message_id", check_fields=False)
     @classmethod
     def validate_telegram_message_id(cls, v: int | None) -> int | None:
@@ -69,7 +68,6 @@ class TelegramMessageValidationMixin:
 
 # --- BASE MODEL ---
 class TelegramMessageBase(AppBaseModel, TelegramMessageValidationMixin):
-
     telegram_message_id: int = Field(
         ...,
         gt=0,
@@ -118,7 +116,6 @@ class TelegramMessageCreate(TelegramMessageBase):
 
 
 class TelegramMessageUpdate(AppBaseModel, TelegramMessageValidationMixin):
-
     telegram_message_id: int | None = Field(
         None, gt=0, description="Telegram message ID (typically should not be changed)"
     )

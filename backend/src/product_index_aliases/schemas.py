@@ -6,7 +6,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class ProductIndexAliasValidationMixin:
-
     @field_validator("raw_name", check_fields=False)
     @classmethod
     def validate_raw_name(cls, v: str | None) -> str | None:
@@ -58,7 +57,6 @@ class ProductIndexAliasValidationMixin:
 
 # --- BASE MODEL ---
 class ProductIndexAliasBase(AppBaseModel, ProductIndexAliasValidationMixin):
-
     raw_name: str = Field(
         ..., min_length=1, description="Raw OCR text (required, cannot be empty)"
     )
@@ -93,7 +91,6 @@ class ProductIndexAliasCreate(ProductIndexAliasBase):
 
 
 class ProductIndexAliasUpdate(AppBaseModel, ProductIndexAliasValidationMixin):
-
     raw_name: str | None = Field(None, min_length=1, description="Raw OCR text")
 
     confirmations_count: int | None = Field(

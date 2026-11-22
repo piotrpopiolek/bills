@@ -6,7 +6,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class MagicLinkValidationMixin:
-
     @field_validator("user_id", check_fields=False)
     @classmethod
     def validate_user_id(cls, v: int | None) -> int | None:

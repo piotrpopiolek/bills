@@ -8,7 +8,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class BillValidationMixin:
-
     @field_validator("total_amount", check_fields=False)
     @classmethod
     def validate_total_amount(cls, v: Decimal | None) -> Decimal | None:
@@ -62,7 +61,6 @@ class BillValidationMixin:
 
 # --- BASE MODEL ---
 class BillBase(AppBaseModel, BillValidationMixin):
-
     status: ProcessingStatus = Field(
         ProcessingStatus.PENDING, description="Processing status (default: pending)"
     )
@@ -110,7 +108,6 @@ class BillCreate(BillBase):
 
 
 class BillUpdate(AppBaseModel, BillValidationMixin):
-
     status: ProcessingStatus | None = Field(None, description="Processing status")
 
     bill_date: datetime | None = Field(None, description="Bill date")

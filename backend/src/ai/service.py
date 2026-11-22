@@ -365,7 +365,6 @@ Zwróć odpowiedź w formacie JSON:
 }}"""
 
         try:
-
             response = await self.gemini_model.generate_content_async(
                 prompt,
                 generation_config=genai.GenerationConfig(  # type: ignore[attr-defined]
@@ -477,7 +476,8 @@ Zwróć odpowiedź w formacie JSON:
         # Step 2: Fuzzy Search (jeśli alias nie znaleziony)
         if not product_index:
             product_index = await self._fuzzy_search_product(
-                cleaned_text, ocr_item.category_suggestion  # Opcjonalne filtrowanie
+                cleaned_text,
+                ocr_item.category_suggestion,  # Opcjonalne filtrowanie
             )
 
             # Zapis aliasu po znalezieniu przez fuzzy search (uczenie się systemu)

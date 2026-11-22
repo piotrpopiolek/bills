@@ -188,13 +188,14 @@ class BillVerificationService:
             edited_category_id = bill_item.category_id
 
         # Użyj ProductLearningService do weryfikacji (automatycznie tworzy aliasy i ProductIndex)
-        verified_item, product_index = (
-            await self.product_learning_service.handle_user_bill_item_verification(
-                bill_item_id=bill_item_id,
-                user_id=user_id,
-                edited_original_text=edited_text,
-                edited_category_id=edited_category_id,
-            )
+        (
+            verified_item,
+            product_index,
+        ) = await self.product_learning_service.handle_user_bill_item_verification(
+            bill_item_id=bill_item_id,
+            user_id=user_id,
+            edited_original_text=edited_text,
+            edited_category_id=edited_category_id,
         )
 
         logger.info(

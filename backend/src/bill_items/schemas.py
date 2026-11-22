@@ -8,7 +8,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class BillItemValidationMixin:
-
     @field_validator("quantity", check_fields=False)
     @classmethod
     def validate_quantity(cls, v: Decimal | None) -> Decimal | None:
@@ -49,7 +48,6 @@ class BillItemValidationMixin:
 
 # --- BASE MODEL ---
 class BillItemBase(AppBaseModel, BillItemValidationMixin):
-
     quantity: Decimal = Field(
         ...,
         gt=0,
@@ -101,7 +99,6 @@ class BillItemCreate(BillItemBase):
 
 
 class BillItemUpdate(AppBaseModel, BillItemValidationMixin):
-
     quantity: Decimal | None = Field(None, gt=0, description="Quantity of the item")
 
     unit_price: Decimal | None = Field(None, ge=0, description="Unit price of the item")

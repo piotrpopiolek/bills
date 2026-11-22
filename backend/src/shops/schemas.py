@@ -7,7 +7,6 @@ from src.shops.normalization import normalize_shop_address, normalize_shop_name
 
 
 class ShopValidationMixin:
-
     @field_validator("name", mode="before")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
@@ -39,7 +38,6 @@ class ShopValidationMixin:
 
 # --- BASE MODEL ---
 class ShopBase(AppBaseModel, ShopValidationMixin):
-
     name: str = Field(
         ...,
         min_length=1,
@@ -59,7 +57,6 @@ class ShopCreate(ShopBase):
 
 
 class ShopUpdate(AppBaseModel, ShopValidationMixin):
-
     name: str | None = Field(
         None, min_length=1, max_length=255, description="Name of the shop"
     )

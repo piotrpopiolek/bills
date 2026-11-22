@@ -116,7 +116,8 @@ class LLMReceiptItem(AppBaseModel):
     """Strict schema dla pojedynczej pozycji - używane w komunikacji z LLM"""
 
     model_config = ConfigDict(
-        strict=True, extra="forbid"  # Wymuszenie typów  # Odrzucenie nieznanych pól
+        strict=True,
+        extra="forbid",  # Wymuszenie typów  # Odrzucenie nieznanych pól
     )
 
     name: str

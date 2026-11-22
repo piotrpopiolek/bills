@@ -6,7 +6,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class CategoryValidationMixin:
-
     @field_validator("name", check_fields=False)
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
@@ -26,7 +25,6 @@ class CategoryValidationMixin:
 
 # --- BASE MODEL ---
 class CategoryBase(AppBaseModel, CategoryValidationMixin):
-
     name: str = Field(
         ...,
         min_length=1,
@@ -46,7 +44,6 @@ class CategoryCreate(CategoryBase):
 
 
 class CategoryUpdate(AppBaseModel, CategoryValidationMixin):
-
     name: str | None = Field(
         None, min_length=1, max_length=255, description="Category name"
     )

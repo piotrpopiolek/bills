@@ -7,7 +7,6 @@ from src.common.schemas import AppBaseModel, PaginatedResponse
 
 
 class ProductIndexValidationMixin:
-
     @field_validator("name", check_fields=False)
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
@@ -34,7 +33,6 @@ class ProductIndexValidationMixin:
 
 # --- BASE MODEL ---
 class ProductIndexBase(AppBaseModel, ProductIndexValidationMixin):
-
     name: str = Field(
         ...,
         min_length=1,
@@ -56,7 +54,6 @@ class ProductIndexCreate(ProductIndexBase):
 
 
 class ProductIndexUpdate(AppBaseModel, ProductIndexValidationMixin):
-
     name: str | None = Field(
         None, min_length=1, max_length=255, description="Product name"
     )

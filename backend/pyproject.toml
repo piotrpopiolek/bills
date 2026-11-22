@@ -5,8 +5,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-# Black formats code but does not wrap string literals. E501 on those lines
-# would fail every existing module; line length is enforced by black --check.
+# Ruff format does not wrap string literals. E501 on those lines would fail
+# existing modules; line length is enforced by ruff format.
 ignore = ["E501"]
 
 [tool.ruff.lint.flake8-bugbear]
@@ -21,10 +21,6 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
-
-[tool.black]
-line-length = 88
-target-version = ["py313"]
 
 [tool.mypy]
 python_version = "3.13"
