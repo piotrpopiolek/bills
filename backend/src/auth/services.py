@@ -152,9 +152,9 @@ class AuthService(AppService[MagicLink, MagicLinkCreate, MagicLinkUpdate]):
         await self.session.commit()
 
         # Load and return user
-        stmt = select(User).where(User.id == magic_link.user_id)
-        result = await self.session.execute(stmt)
-        user = result.scalar_one()
+        user_stmt = select(User).where(User.id == magic_link.user_id)
+        user_result = await self.session.execute(user_stmt)
+        user = user_result.scalar_one()
 
         return user
 

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Any
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,12 +30,12 @@ class TelegramBotService:
     It manages initialization, handler registration, and webhook processing.
     """
 
-    _application: Application | None = None
-    _polling_task: asyncio.Task | None = None
+    _application: Application[Any, Any, Any, Any, Any, Any] | None = None
+    _polling_task: asyncio.Task[None] | None = None
     _polling_offset: int | None = None
 
     @classmethod
-    async def get_application(cls) -> Application:
+    async def get_application(cls) -> Application[Any, Any, Any, Any, Any, Any]:
         """
         Get or create the singleton Telegram Application instance.
         """
@@ -53,7 +54,7 @@ class TelegramBotService:
         return cls._application
 
     @classmethod
-    async def register_commands(cls):
+    async def register_commands(cls) -> None:
         """
         Public method to register bot commands.
         Should be called after application is fully initialized.
@@ -70,7 +71,7 @@ class TelegramBotService:
         return not settings.TELEGRAM_WEBHOOK_URL
 
     @classmethod
-    async def start_polling(cls):
+    async def start_polling(cls) -> None:
         """
         Start long polling for local development.
         Telegram cannot reach localhost via webhook, so we pull updates instead.
@@ -86,7 +87,7 @@ class TelegramBotService:
         cls._polling_task = asyncio.create_task(cls._polling_loop())
 
     @classmethod
-    async def _polling_loop(cls):
+    async def _polling_loop(cls) -> None:
         app = await cls.get_application()
         while True:
             try:
@@ -106,7 +107,9 @@ class TelegramBotService:
                 await asyncio.sleep(3)
 
     @classmethod
-    async def _process_update_with_session(cls, app: Application, update: Update):
+    async def _process_update_with_session(
+        cls, app: Application[Any, Any, Any, Any, Any, Any], update: Update
+    ) -> None:
         async with AsyncSessionLocal() as session:
             set_db_session(session)
             clear_user()
@@ -121,7 +124,7 @@ class TelegramBotService:
                 clear_user()
 
     @classmethod
-    async def shutdown(cls):
+    async def shutdown(cls) -> None:
         """
         Shutdown the application on server stop.
         """
@@ -138,7 +141,7 @@ class TelegramBotService:
             await cls._application.shutdown()
 
     @classmethod
-    async def _register_bot_commands(cls, bot: Bot):
+    async def _register_bot_commands(cls, bot: Bot) -> None:
         """
         Register bot commands for Telegram UI command suggestions.
 
@@ -175,7 +178,9 @@ class TelegramBotService:
             # Commands will still work, just won't show in UI suggestions
 
     @classmethod
-    async def _register_handlers(cls, app: Application):
+    async def _register_handlers(
+        cls, app: Application[Any, Any, Any, Any, Any, Any]
+    ) -> None:
         """
         Register command and message handlers from the handlers module.
         """
@@ -216,7 +221,7 @@ class TelegramBotService:
     @classmethod
     async def process_webhook_update(
         cls, request: Request, session: AsyncSession, secret_token: str | None = None
-    ):
+    ) -> None:
         """
         Process incoming webhook update from Telegram.
 

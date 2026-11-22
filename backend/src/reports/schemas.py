@@ -146,7 +146,9 @@ class ReportsQueryParams(AppBaseModel):
 
     @field_validator("date", "week_start")
     @classmethod
-    def validate_date_not_future(cls, v: date_type | None, info) -> date_type | None:
+    def validate_date_not_future(
+        cls, v: date_type | None, info: object
+    ) -> date_type | None:
         """Validate that date is not in the future."""
         if v is not None:
             today = date_type.today()

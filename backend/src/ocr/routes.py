@@ -15,10 +15,10 @@ router = APIRouter(prefix="/ocr", tags=["OCR"])
 
 async def get_ocr_service() -> OCRService:
     # Konfiguracja Gemini API (globalna dla biblioteki, ale bezpieczna w tym kontekście)
-    genai.configure(api_key=settings.GEMINI_API_KEY)
+    genai.configure(api_key=settings.GEMINI_API_KEY)  # type: ignore[attr-defined]
 
     # Inicjalizacja modelu
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
+    model = genai.GenerativeModel(settings.GEMINI_MODEL)  # type: ignore[attr-defined]
 
     return OCRService(model=model)
 

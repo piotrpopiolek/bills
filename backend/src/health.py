@@ -8,13 +8,15 @@ router = APIRouter()
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Basic health check without database"""
     return {"status": "ok", "service": "bills-api"}
 
 
 @router.get("/health/db")
-async def health_check_db(db: AsyncSession = Depends(get_session)):
+async def health_check_db(
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, object]:
     """Health check with database connection test"""
     try:
         # Test database connection

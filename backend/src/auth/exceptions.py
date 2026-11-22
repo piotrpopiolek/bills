@@ -100,5 +100,5 @@ class InvalidCredentialsError(AuthError):
     TODO: Implement when adding traditional login/password authentication.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("Nieprawidłowe dane uwierzytelniające.")

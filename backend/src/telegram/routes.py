@@ -21,7 +21,7 @@ async def telegram_webhook(
     x_telegram_bot_api_secret_token: str | None = Header(
         None, alias="X-Telegram-Bot-Api-Secret-Token"
     ),
-):
+) -> dict[str, str]:
     """
     Handle incoming Telegram updates.
 

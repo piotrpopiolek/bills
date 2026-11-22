@@ -13,7 +13,9 @@ from telegram.ext import ContextTypes
 logger = logging.getLogger(__name__)
 
 
-async def logging_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def logging_middleware(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """
     Middleware to log incoming messages and set user in context.
     This runs before other handlers.

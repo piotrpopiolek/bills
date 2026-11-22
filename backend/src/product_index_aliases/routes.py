@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_session
 from src.deps import CurrentUser
+from src.product_index_aliases.models import ProductIndexAlias
 from src.product_index_aliases.schemas import (
     ProductIndexAliasCreate,
     ProductIndexAliasListResponse,
@@ -38,7 +39,7 @@ async def get_product_index_aliases(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all product index aliases.
     Requires authentication.
@@ -54,7 +55,7 @@ async def get_product_index_aliases(
 )
 async def get_product_index_alias(
     alias_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> ProductIndexAlias:
     """
     Get product index alias by ID.
     Requires authentication.
@@ -70,7 +71,7 @@ async def get_product_index_alias(
 )
 async def create_product_index_alias(
     data: ProductIndexAliasCreate, user: CurrentUser, service: ServiceDependency
-):
+) -> ProductIndexAlias:
     """
     Create a new product index alias.
     Requires authentication.
@@ -89,7 +90,7 @@ async def update_product_index_alias(
     data: ProductIndexAliasUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> ProductIndexAlias:
     """
     Update a product index alias.
     Requires authentication.
@@ -104,7 +105,7 @@ async def update_product_index_alias(
 )
 async def delete_product_index_alias(
     alias_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> None:
     """
     Delete a product index alias.
     Requires authentication.

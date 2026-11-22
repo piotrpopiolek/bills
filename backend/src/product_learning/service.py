@@ -10,6 +10,7 @@ w Pythonie, gdzie logika biznesowa jest w serwisach, a nie w kontrolerach.
 import logging
 import re
 from collections import Counter
+from typing import cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -162,7 +163,7 @@ class ProductLearningService:
 
         if row:
             # Znaleziono istniejący kandydat
-            candidate = row[0]
+            candidate = cast(ProductCandidate, row[0])
             # Zwiększ licznik potwierdzeń
             candidate.user_confirmations += 1
             # Aktualizuj category_id (jeśli podane i różne)

@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_session
 from src.deps import CurrentUser
+from src.product_candidates.models import ProductCandidate
 from src.product_candidates.schemas import (
     ProductCandidateCreate,
     ProductCandidateListResponse,
@@ -43,7 +44,7 @@ async def get_product_candidates(
         None, description="Filter by status (pending, approved, rejected)"
     ),
     category_id: int | None = Query(None, ge=1, description="Filter by category ID"),
-):
+) -> dict[str, Any]:
     """
     List all product candidates.
     Requires authentication.
@@ -61,7 +62,7 @@ async def get_product_candidates(
 )
 async def get_product_candidate(
     product_candidate_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> ProductCandidate:
     """
     Get product candidate by ID.
     Requires authentication.
@@ -77,7 +78,7 @@ async def get_product_candidate(
 )
 async def create_product_candidate(
     data: ProductCandidateCreate, user: CurrentUser, service: ServiceDependency
-):
+) -> ProductCandidate:
     """
     Create a new product candidate.
     Requires authentication.
@@ -96,7 +97,7 @@ async def update_product_candidate(
     data: ProductCandidateUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> ProductCandidate:
     """
     Update a product candidate.
     Requires authentication.
@@ -111,7 +112,7 @@ async def update_product_candidate(
 )
 async def delete_product_candidate(
     product_candidate_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> None:
     """
     Delete a product candidate.
     Requires authentication.

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,7 @@ async def get_bill_items(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all bill items.
     Requires authentication.
@@ -52,7 +52,7 @@ async def get_bill_items(
 )
 async def get_bill_item(
     bill_item_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> BillItemResponse:
     """
     Get bill item by ID.
     Requires authentication.
@@ -68,7 +68,7 @@ async def get_bill_item(
 )
 async def create_bill_item(
     data: BillItemCreate, user: CurrentUser, service: ServiceDependency
-):
+) -> BillItemResponse:
     """
     Create a new bill item.
     Requires authentication.
@@ -87,7 +87,7 @@ async def update_bill_item(
     data: BillItemUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> BillItemResponse:
     """
     Update a bill item.
     Requires authentication.
@@ -102,7 +102,7 @@ async def update_bill_item(
 )
 async def delete_bill_item(
     bill_item_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> None:
     """
     Delete a bill item.
     Requires authentication.

@@ -73,7 +73,7 @@ class OCRService:
 
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
-    def __init__(self, model: genai.GenerativeModel):
+    def __init__(self, model: Any) -> None:
         self.model = model
 
     async def extract_data(self, file: UploadFile) -> OCRReceiptData:
@@ -240,7 +240,7 @@ Rules:
             # Użycie response_schema w generation_config dla Structured Output
             response = await self.model.generate_content_async(
                 parts,
-                generation_config=genai.GenerationConfig(
+                generation_config=genai.GenerationConfig(  # type: ignore[attr-defined]
                     response_mime_type="application/json",
                     response_schema=schema,  # Przekazujemy słownik, nie klasę
                 ),

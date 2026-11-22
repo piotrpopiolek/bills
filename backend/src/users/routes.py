@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_session
 from src.deps import CurrentUser
+from src.users.models import User
 from src.users.schemas import (
     UsageStats,
     UserCreate,
@@ -81,7 +82,7 @@ async def get_users(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all users.
     Requires authentication.
@@ -95,7 +96,9 @@ async def get_users(
     status_code=status.HTTP_200_OK,
     summary="Get user by ID",
 )
-async def get_user(user_id: int, user: CurrentUser, service: ServiceDependency):
+async def get_user(
+    user_id: int, user: CurrentUser, service: ServiceDependency
+) -> User:
     """
     Get user by ID.
     Requires authentication.
@@ -109,7 +112,9 @@ async def get_user(user_id: int, user: CurrentUser, service: ServiceDependency):
     status_code=status.HTTP_201_CREATED,
     summary="Create a new user",
 )
-async def create_user(data: UserCreate, user: CurrentUser, service: ServiceDependency):
+async def create_user(
+    data: UserCreate, user: CurrentUser, service: ServiceDependency
+) -> User:
     """
     Create a new user.
     Requires authentication.
@@ -125,7 +130,7 @@ async def create_user(data: UserCreate, user: CurrentUser, service: ServiceDepen
 )
 async def update_user(
     user_id: int, data: UserUpdate, user: CurrentUser, service: ServiceDependency
-):
+) -> User:
     """
     Update a user.
     Requires authentication.
@@ -136,7 +141,9 @@ async def update_user(
 @router.delete(
     "/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a user"
 )
-async def delete_user(user_id: int, user: CurrentUser, service: ServiceDependency):
+async def delete_user(
+    user_id: int, user: CurrentUser, service: ServiceDependency
+) -> None:
     """
     Delete a user.
     Requires authentication.

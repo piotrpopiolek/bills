@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_session
 from src.deps import CurrentUser
+from src.telegram_messages.models import TelegramMessage
 from src.telegram_messages.schemas import (
     TelegramMessageCreate,
     TelegramMessageListResponse,
@@ -38,7 +39,7 @@ async def get_telegram_messages(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all telegram messages.
     Requires authentication.
@@ -54,7 +55,7 @@ async def get_telegram_messages(
 )
 async def get_telegram_message(
     message_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> TelegramMessage:
     """
     Get telegram message by ID.
     Requires authentication.
@@ -70,7 +71,7 @@ async def get_telegram_message(
 )
 async def create_telegram_message(
     data: TelegramMessageCreate, user: CurrentUser, service: ServiceDependency
-):
+) -> TelegramMessage:
     """
     Create a new telegram message.
     Requires authentication.
@@ -89,7 +90,7 @@ async def update_telegram_message(
     data: TelegramMessageUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> TelegramMessage:
     """
     Update a telegram message.
     Requires authentication.
@@ -104,7 +105,7 @@ async def update_telegram_message(
 )
 async def delete_telegram_message(
     message_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> None:
     """
     Delete a telegram message.
     Requires authentication.

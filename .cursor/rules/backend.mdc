@@ -40,7 +40,7 @@ alwaysApply: false
 - Serwis rzuca wyjątek domenowy. Routa rzuca `HTTPException`. Tłumaczenie jest w `src/error_handler.py`.
 - Sekrety czytaj przez `Settings` (`pydantic-settings`). Nie wstawiaj ich do kodu.
 - Python 3.14, `ruff check`, `ruff format`, linia 88. Nowy kod ma adnotacje typów.
-- Job `typecheck` odpala `mypy src` według `backend/pyproject.toml`. `strict = true` włączasz osobno, gdy ten przebieg z flagą strict jest zielony.
+- `backend/pyproject.toml` ma `strict = true`. Job `typecheck` odpala `mypy src`.
 
 ## 6) Katalog, limity i korekta
 

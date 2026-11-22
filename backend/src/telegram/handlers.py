@@ -8,7 +8,7 @@ from src.auth.services import AuthService
 from src.bill_items.models import BillItem
 from src.bills.dependencies import get_bill_verification_service
 from src.bills.models import Bill, ProcessingStatus
-from src.bills.schemas import BillCreate, BillUpdate
+from src.bills.schemas import BillCreate, BillResponse, BillUpdate
 from src.bills.services import BillService
 from src.common.exceptions import ResourceNotFoundError
 from src.processing.dependencies import get_bills_processor_service
@@ -48,7 +48,7 @@ def _user_data(context: ContextTypes.DEFAULT_TYPE) -> dict[Any, Any]:
     return data
 
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /start command.
     """
@@ -64,7 +64,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /login command using Magic Link.
     """
@@ -102,7 +102,7 @@ async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Wystąpił błąd podczas generowania linku.")
 
 
-async def daily_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def daily_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /dzis command - generate daily expense report.
 
@@ -162,7 +162,7 @@ async def daily_report_command(update: Update, context: ContextTypes.DEFAULT_TYP
             await update.message.reply_text(get_user_message(e))
 
 
-async def weekly_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def weekly_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /tydzien command - generate weekly expense report.
 
@@ -234,7 +234,7 @@ async def weekly_report_command(update: Update, context: ContextTypes.DEFAULT_TY
             await update.message.reply_text(get_user_message(e))
 
 
-async def privacy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def privacy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /prywatnosc command - display privacy policy.
 
@@ -268,7 +268,7 @@ async def privacy_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(privacy_text)
 
 
-async def monthly_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def monthly_report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /miesiac command - generate monthly expense report.
 
@@ -329,7 +329,7 @@ async def monthly_report_command(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(get_user_message(e))
 
 
-async def verify_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def verify_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle /verify command with bill_id argument.
     Allows manual start of bill verification process.
@@ -483,7 +483,7 @@ async def _mark_receipt_processing_failed(
         )
 
 
-async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handle incoming receipt images.
     Orchestrates the process: Auth -> Download -> Upload -> Create Bill Record.
@@ -586,6 +586,7 @@ async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYP
             )  # Convert to list to ensure it's evaluated
 
             # If duplicate exists, use the most recent one instead of creating a new bill
+            bill: Bill | BillResponse
             if existing_bills:
                 existing_bill = existing_bills[0]  # Most recent (ordered by id desc)
 
@@ -759,7 +760,7 @@ async def handle_receipt_image(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def start_bill_verification(
     update: Update, context: ContextTypes.DEFAULT_TYPE, bill_id: int, user_id: int
-):
+) -> None:
     """
     Rozpoczyna proces weryfikacji rachunku.
     Wysyła pierwszą pozycję wymagającą weryfikacji.
@@ -844,7 +845,7 @@ async def start_bill_verification(
 
 async def handle_item_verification_callback(
     update: Update, context: ContextTypes.DEFAULT_TYPE
-):
+) -> None:
     """
     Obsługuje callback z przycisków weryfikacji.
     Callback data format: "verify:{action}:{bill_item_id}"
@@ -1018,7 +1019,7 @@ async def handle_item_verification_callback(
             )
 
 
-async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_item_edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Obsługuje edycję tekstu pozycji (gdy użytkownik jest w trybie edycji).
     """

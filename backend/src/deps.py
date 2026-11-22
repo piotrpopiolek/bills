@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.auth.exceptions import InvalidTokenError
 from src.auth.jwt import get_user_id_from_token
 from src.auth.services import AuthService
-from src.db.main import get_session
+from src.db.main import get_session as get_session
 from src.users.models import User
 
 # Logger for this module

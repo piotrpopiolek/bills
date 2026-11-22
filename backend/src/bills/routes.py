@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,7 @@ async def get_bills(
     user: CurrentUser,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     Get all bills for the authenticated user.
     Enforces user isolation - returns only bills belonging to the current user.
@@ -50,7 +50,9 @@ async def get_bills(
     status_code=status.HTTP_200_OK,
     summary="Get bill by ID",
 )
-async def get_bill(bill_id: int, service: ServiceDependency, user: CurrentUser):
+async def get_bill(
+    bill_id: int, service: ServiceDependency, user: CurrentUser
+) -> BillResponse:
     """
     Get a specific bill by ID for the authenticated user.
     Enforces user isolation - returns 403 if bill doesn't belong to the current user.
@@ -70,7 +72,7 @@ async def get_bill_items(
     user: CurrentUser,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     Get all items for a specific bill.
     Automatically verifies ownership - returns 403 if bill doesn't belong to the current user.
@@ -89,7 +91,9 @@ async def get_bill_items(
     summary="Create a new bill",
     dependencies=[Depends(check_monthly_bills_limit)],
 )
-async def create_bill(data: BillCreate, service: ServiceDependency, user: CurrentUser):
+async def create_bill(
+    data: BillCreate, service: ServiceDependency, user: CurrentUser
+) -> BillResponse:
     # Enforce user isolation: user_id from token takes precedence
     data.user_id = user.id
     return await service.create(data)
@@ -103,7 +107,7 @@ async def create_bill(data: BillCreate, service: ServiceDependency, user: Curren
 )
 async def update_bill(
     bill_id: int, data: BillUpdate, service: ServiceDependency, user: CurrentUser
-):
+) -> BillResponse:
     """
     Update a bill by ID for the authenticated user.
     Enforces user isolation - returns 403 if bill doesn't belong to the current user.
@@ -115,7 +119,9 @@ async def update_bill(
 @router.delete(
     "/{bill_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a bill"
 )
-async def delete_bill(bill_id: int, service: ServiceDependency, user: CurrentUser):
+async def delete_bill(
+    bill_id: int, service: ServiceDependency, user: CurrentUser
+) -> None:
     """
     Delete a bill by ID for the authenticated user.
     Enforces user isolation - returns 403 if bill doesn't belong to the current user.

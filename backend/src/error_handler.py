@@ -31,7 +31,7 @@ def exception_handler(app: FastAPI) -> None:
     """
 
     @app.exception_handler(ResourceNotFoundError)
-    async def resource_not_found_handler(request: Request, exc: ResourceNotFoundError):
+    async def resource_not_found_handler(request: Request, exc: ResourceNotFoundError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"detail": exc.message},
@@ -40,14 +40,14 @@ def exception_handler(app: FastAPI) -> None:
     @app.exception_handler(ResourceAlreadyExistsError)
     async def resource_already_exists_handler(
         request: Request, exc: ResourceAlreadyExistsError
-    ):
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": exc.message},
         )
 
     @app.exception_handler(CategoryCycleError)
-    async def category_cycle_handler(request: Request, exc: CategoryCycleError):
+    async def category_cycle_handler(request: Request, exc: CategoryCycleError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
@@ -56,70 +56,70 @@ def exception_handler(app: FastAPI) -> None:
     @app.exception_handler(CategoryHasChildrenError)
     async def category_has_children_handler(
         request: Request, exc: CategoryHasChildrenError
-    ):
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(InvalidTokenError)
-    async def invalid_token_handler(request: Request, exc: InvalidTokenError):
+    async def invalid_token_handler(request: Request, exc: InvalidTokenError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(TokenExpiredError)
-    async def token_expired_handler(request: Request, exc: TokenExpiredError):
+    async def token_expired_handler(request: Request, exc: TokenExpiredError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(TokenAlreadyUsedError)
-    async def token_already_used_handler(request: Request, exc: TokenAlreadyUsedError):
+    async def token_already_used_handler(request: Request, exc: TokenAlreadyUsedError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(AuthUserNotFoundError)
-    async def auth_user_not_found_handler(request: Request, exc: AuthUserNotFoundError):
+    async def auth_user_not_found_handler(request: Request, exc: AuthUserNotFoundError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(BillAccessDeniedError)
-    async def bill_access_denied_handler(request: Request, exc: BillAccessDeniedError):
+    async def bill_access_denied_handler(request: Request, exc: BillAccessDeniedError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": exc.message},
         )
 
     @app.exception_handler(FileValidationError)
-    async def file_validation_error_handler(request: Request, exc: FileValidationError):
+    async def file_validation_error_handler(request: Request, exc: FileValidationError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(ExtractionError)
-    async def extraction_error_handler(request: Request, exc: ExtractionError):
+    async def extraction_error_handler(request: Request, exc: ExtractionError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": str(exc)},
         )
 
     @app.exception_handler(AIServiceError)
-    async def ai_service_error_handler(request: Request, exc: AIServiceError):
+    async def ai_service_error_handler(request: Request, exc: AIServiceError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={"detail": "AI Service temporarily unavailable"},
         )
 
     @app.exception_handler(InvalidDateRangeError)
-    async def invalid_date_range_handler(request: Request, exc: InvalidDateRangeError):
+    async def invalid_date_range_handler(request: Request, exc: InvalidDateRangeError) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},
@@ -128,7 +128,7 @@ def exception_handler(app: FastAPI) -> None:
     @app.exception_handler(InvalidMonthFormatError)
     async def invalid_month_format_handler(
         request: Request, exc: InvalidMonthFormatError
-    ):
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"detail": str(exc)},

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,7 @@ async def get_categories(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all categories.
     Requires authentication.
@@ -50,7 +50,9 @@ async def get_categories(
     status_code=status.HTTP_200_OK,
     summary="Get category by ID",
 )
-async def get_category(category_id: int, user: CurrentUser, service: ServiceDependency):
+async def get_category(
+    category_id: int, user: CurrentUser, service: ServiceDependency
+) -> CategoryResponse:
     """
     Get category by ID.
     Requires authentication.
@@ -66,7 +68,7 @@ async def get_category(category_id: int, user: CurrentUser, service: ServiceDepe
 )
 async def create_category(
     data: CategoryCreate, user: CurrentUser, service: ServiceDependency
-):
+) -> CategoryResponse:
     """
     Create a new category.
     Requires authentication.
@@ -85,7 +87,7 @@ async def update_category(
     data: CategoryUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> CategoryResponse:
     """
     Update a category.
     Requires authentication.
@@ -100,7 +102,7 @@ async def update_category(
 )
 async def delete_category(
     category_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> None:
     """
     Delete a category.
     Requires authentication.

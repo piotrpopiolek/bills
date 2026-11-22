@@ -19,15 +19,16 @@ class StorageService:
     Falls back to local storage if Supabase is not configured.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.supabase_client: Client | None = None
         # Backend always prefers Service Role key for full access (bypass RLS)
         self.key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY
         self.use_supabase = bool(settings.SUPABASE_URL and self.key)
 
-        if self.use_supabase:
+        url = settings.SUPABASE_URL
+        if self.use_supabase and url is not None and self.key is not None:
             try:
-                self.supabase_client = create_client(settings.SUPABASE_URL, self.key)
+                self.supabase_client = create_client(url, self.key)
                 logger.info("Supabase Storage client initialized")
             except Exception as e:
                 logger.warning(

@@ -19,7 +19,7 @@ Wspólny setup to [`.github/actions/setup-backend`](.github/actions/setup-backen
 - Do podbicia interpretera Python w tej akcji i w jobie `pip-audit` to `3.13`. Po punkcie Python 3.14 obie wartości to `3.14`.
 - Do przepięcia na uv joby wołają `pip install -r` wskazany plik requirements. Po nim robią `uv sync --frozen`, a `pip-audit` idzie na locku. uv ma przypiętą wersję.
 - `lint` odpala `ruff check` i `ruff format --check`. Linia ma 88 znaków.
-- `typecheck` instaluje `requirements-dev.txt` i odpala `mypy src`. `strict = true` wchodzi osobno, gdy przebieg z tą flagą jest zielony.
+- `typecheck` instaluje `requirements-dev.txt` i odpala `mypy src`. `backend/pyproject.toml` ma `strict = true`.
 - `test` wstaje z Postgresem i nakłada pliki z `supabase/migrations`, potem pytest. Dziś obraz to `postgres:16-alpine`. Gdy wchodzi pgvector, serwis to `pgvector/pgvector:pg16`.
 - `npm ci` nie jest ścieżką backendu.
 

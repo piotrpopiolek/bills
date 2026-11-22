@@ -156,7 +156,7 @@ class UserService(AppService[User, UserCreate, UserUpdate]):
 
         return count
 
-    async def get_user_usage_stats(self, user_id: int) -> dict:
+    async def get_user_usage_stats(self, user_id: int) -> dict[str, int]:
         """
         Get comprehensive usage statistics for a user.
 

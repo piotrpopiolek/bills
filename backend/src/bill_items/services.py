@@ -131,9 +131,9 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         # Ownership verification (jeśli user_id podane)
         if user_id is not None:
             # Pobierz Bill przez relację i sprawdź user_id
-            stmt = select(Bill).where(Bill.id == bill_item.bill_id)
-            result = await self.session.execute(stmt)
-            bill = result.scalar_one_or_none()
+            bill_stmt = select(Bill).where(Bill.id == bill_item.bill_id)
+            bill_result = await self.session.execute(bill_stmt)
+            bill = bill_result.scalar_one_or_none()
 
             if not bill:
                 raise ResourceNotFoundError("Bill", bill_item.bill_id)
@@ -303,9 +303,9 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
             BillAccessDeniedError: Jeśli rachunek nie należy do użytkownika
         """
         # Weryfikacja ownership: sprawdź czy Bill istnieje i należy do user_id
-        stmt = select(Bill).where(Bill.id == bill_id)
-        result = await self.session.execute(stmt)
-        bill = result.scalar_one_or_none()
+        bill_stmt = select(Bill).where(Bill.id == bill_id)
+        bill_result = await self.session.execute(bill_stmt)
+        bill = bill_result.scalar_one_or_none()
 
         if not bill:
             raise ResourceNotFoundError("Bill", bill_id)
@@ -324,7 +324,7 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
 
         # Fetch items with eager loading of index and category relationships (prevents N+1 queries)
         # Uses LEFT JOIN to load index and category data in a single query
-        stmt = (
+        item_stmt = (
             select(BillItem)
             .options(
                 joinedload(BillItem.index),  # Eager load ProductIndex
@@ -336,7 +336,7 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
             .order_by(BillItem.id)
         )
 
-        result = await self.session.execute(stmt)
+        result = await self.session.execute(item_stmt)
         items = result.scalars().all()
 
         # Convert to response schemas with index_name and category_name

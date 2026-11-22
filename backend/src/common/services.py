@@ -111,7 +111,7 @@ class AppService[
 
     async def _ensure_unique(
         self,
-        model: type[ModelType],
+        model: type[DeclarativeBase],
         field: Any,
         value: Any,
         resource_name: str,
@@ -134,7 +134,7 @@ class AppService[
 
     async def _ensure_exists(
         self,
-        model: type[ModelType],
+        model: type[DeclarativeBase],
         field: Any,
         value: Any,
         resource_name: str,

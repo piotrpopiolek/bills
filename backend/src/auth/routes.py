@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.exceptions import InvalidTokenError
 from src.auth.jwt import verify_refresh_token
+from src.auth.models import MagicLink
 from src.auth.schemas import (
     MagicLinkInternalResponse,
     MagicLinkListResponse,
@@ -230,7 +231,7 @@ async def get_magic_links(
 )
 async def get_magic_link(
     magic_link_id: int, user: CurrentUser, service: ServiceDependency
-) -> MagicLinkInternalResponse:
+) -> MagicLink:
     """
     Get magic link by ID.
     Requires authentication.
@@ -262,7 +263,7 @@ async def update_magic_link(
     data: MagicLinkUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> MagicLink:
     """
     Update magic link record.
     Requires authentication.

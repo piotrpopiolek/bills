@@ -81,8 +81,8 @@ class AICategorizationService:
         self.alias_service = alias_service
         self.category_service = category_service
 
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL)
+        genai.configure(api_key=settings.GEMINI_API_KEY)  # type: ignore[attr-defined]
+        self.gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL)  # type: ignore[attr-defined]
 
     def _preprocess_text(self, raw_text: str) -> str:
         """
@@ -368,7 +368,7 @@ Zwróć odpowiedź w formacie JSON:
 
             response = await self.gemini_model.generate_content_async(
                 prompt,
-                generation_config=genai.GenerationConfig(
+                generation_config=genai.GenerationConfig(  # type: ignore[attr-defined]
                     response_mime_type="application/json",
                     temperature=settings.AI_CATEGORIZATION_TEMPERATURE,
                 ),

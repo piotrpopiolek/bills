@@ -15,12 +15,12 @@ from telegram.ext import ExtBot
 logger = logging.getLogger(__name__)
 
 
-class LoggingBot(ExtBot):  # Inherit from ExtBot which is used by Application
+class LoggingBot(ExtBot[None]):
     """
     Custom Bot class that automatically logs outgoing messages.
     """
 
-    async def _log_message(self, message: Message, chat_id: int):
+    async def _log_message(self, message: Message, chat_id: int) -> None:
         """
         Log outgoing message to database using the current session.
         """

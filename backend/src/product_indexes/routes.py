@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_session
 from src.deps import CurrentUser
+from src.product_indexes.models import ProductIndex
 from src.product_indexes.schemas import (
     ProductIndexCreate,
     ProductIndexListResponse,
@@ -36,7 +37,7 @@ async def get_product_indexes(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all product indexes.
     Requires authentication.
@@ -52,7 +53,7 @@ async def get_product_indexes(
 )
 async def get_product_index(
     product_index_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> ProductIndex:
     """
     Get product index by ID.
     Requires authentication.
@@ -68,7 +69,7 @@ async def get_product_index(
 )
 async def create_product_index(
     data: ProductIndexCreate, user: CurrentUser, service: ServiceDependency
-):
+) -> ProductIndex:
     """
     Create a new product index.
     Requires authentication.
@@ -87,7 +88,7 @@ async def update_product_index(
     data: ProductIndexUpdate,
     user: CurrentUser,
     service: ServiceDependency,
-):
+) -> ProductIndex:
     """
     Update a product index.
     Requires authentication.
@@ -102,7 +103,7 @@ async def update_product_index(
 )
 async def delete_product_index(
     product_index_id: int, user: CurrentUser, service: ServiceDependency
-):
+) -> None:
     """
     Delete a product index.
     Requires authentication.

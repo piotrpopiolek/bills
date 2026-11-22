@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_session
 from src.deps import CurrentUser
+from src.shops.models import Shop
 from src.shops.schemas import ShopCreate, ShopListResponse, ShopResponse, ShopUpdate
 from src.shops.services import ShopService
 
@@ -31,7 +32,7 @@ async def get_shops(
     service: ServiceDependency,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(100, ge=1, le=100, description="Max number of items to return"),
-):
+) -> dict[str, Any]:
     """
     List all shops.
     Requires authentication.
@@ -45,7 +46,9 @@ async def get_shops(
     status_code=status.HTTP_200_OK,
     summary="Get shop by ID",
 )
-async def get_shop(shop_id: int, user: CurrentUser, service: ServiceDependency):
+async def get_shop(
+    shop_id: int, user: CurrentUser, service: ServiceDependency
+) -> Shop:
     """
     Get shop by ID.
     Requires authentication.
@@ -59,7 +62,9 @@ async def get_shop(shop_id: int, user: CurrentUser, service: ServiceDependency):
     status_code=status.HTTP_201_CREATED,
     summary="Create a new shop",
 )
-async def create_shop(data: ShopCreate, user: CurrentUser, service: ServiceDependency):
+async def create_shop(
+    data: ShopCreate, user: CurrentUser, service: ServiceDependency
+) -> Shop:
     """
     Create a new shop.
     Requires authentication.
@@ -75,7 +80,7 @@ async def create_shop(data: ShopCreate, user: CurrentUser, service: ServiceDepen
 )
 async def update_shop(
     shop_id: int, data: ShopUpdate, user: CurrentUser, service: ServiceDependency
-):
+) -> Shop:
     """
     Update a shop.
     Requires authentication.
@@ -86,7 +91,9 @@ async def update_shop(
 @router.delete(
     "/{shop_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a shop"
 )
-async def delete_shop(shop_id: int, user: CurrentUser, service: ServiceDependency):
+async def delete_shop(
+    shop_id: int, user: CurrentUser, service: ServiceDependency
+) -> None:
     """
     Delete a shop.
     Requires authentication.
