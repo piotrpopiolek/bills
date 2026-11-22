@@ -3,7 +3,7 @@ description: Install pinned uv 0.13.9 and sync the backend lock
 runs:
   using: composite
   steps:
-    - uses: astral-sh/setup-uv@v10
+    - uses: astral-sh/setup-uv@v10.4.0
       with:
         version: "0.13.9"
         python-version: "3.14"
