@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from decimal import Decimal
 
 import google.generativeai as genai
@@ -12,6 +13,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from src.ai.catalog_prompt import build_categorization_prompt, hits_for_categorization
 from src.ai.confidence import normalization_confidence
 from src.ai.schemas import NormalizedItem
+from src.ai.usage import CallOutcome, ModelUsage, generative_call_allowed
 from src.categories.models import Category
 from src.categories.schemas import CategoryResponse
 from src.categories.services import CategoryService
@@ -25,6 +27,14 @@ from src.product_indexes.models import ProductIndex
 from src.product_indexes.services import ProductIndexService
 
 logger = logging.getLogger(__name__)
+
+
+def _token_count(response: object) -> int | None:
+    usage = getattr(response, "usage_metadata", None)
+    total = getattr(usage, "total_token_count", None)
+    if total is None:
+        return None
+    return int(total)
 
 
 def _should_retry_gemini_error(exception: BaseException) -> bool:
@@ -83,6 +93,7 @@ class AICategorizationService:
         self.product_index_service = product_index_service
         self.alias_service = alias_service
         self.category_service = category_service
+        self.usage = ModelUsage(session)
 
         genai.configure(api_key=settings.GEMINI_API_KEY)  # type: ignore[attr-defined]
         self.gemini_model = genai.GenerativeModel(settings.GEMINI_MODEL)  # type: ignore[attr-defined]
@@ -250,6 +261,7 @@ class AICategorizationService:
         category_suggestion: str | None = None,
         shop_name: str | None = None,
         catalog_hits: list[CatalogHit] | None = None,
+        user_id: int | None = None,
     ) -> CategoryResponse:
         """
         Przypisuje kategorię do produktu.
@@ -299,6 +311,7 @@ class AICategorizationService:
                 product_index.name if product_index is not None else None,
                 catalog_hits or [],
             ),
+            user_id=user_id,
         )
 
         if ai_category_id:
@@ -332,6 +345,7 @@ class AICategorizationService:
         shop_name: str | None = None,
         available_categories: list[Category] | None = None,
         catalog_hits: list[CatalogHit] | None = None,
+        user_id: int | None = None,
     ) -> int | None:
         """
         Używa Gemini API do zaproponowania kategorii dla nieznanego produktu.
@@ -370,7 +384,21 @@ class AICategorizationService:
             category_names=[cat.name for cat in available_categories],
         )
 
+        if user_id is not None:
+            used_today = await self.usage.generative_used_today(user_id)
+            if not generative_call_allowed(used_today, settings.GENERATIVE_DAILY_LIMIT):
+                logger.info(
+                    "Dzienny limit modelu generującego wyczerpany dla użytkownika %s",
+                    user_id,
+                )
+                return None
+
+        started = time.perf_counter()
+        outcome: CallOutcome = "rejected"
+        tokens: int | None = None
+        invoked = False
         try:
+            invoked = True
             response = await self.gemini_model.generate_content_async(
                 prompt,
                 generation_config=genai.GenerationConfig(  # type: ignore[attr-defined]
@@ -378,39 +406,38 @@ class AICategorizationService:
                     temperature=settings.AI_CATEGORIZATION_TEMPERATURE,
                 ),
             )
-
-            if not response.text:
+            tokens = _token_count(response)
+            text = getattr(response, "text", None)
+            if not text:
                 logger.warning("Gemini zwróciło pustą odpowiedź dla kategoryzacji")
                 return None
 
-            # Parsowanie JSON response
-            parsed_data = json.loads(response.text)
+            parsed_data = json.loads(text)
             category_name = parsed_data.get("category_name")
             confidence = parsed_data.get("confidence", 0.0)
             reasoning = parsed_data.get("reasoning", "")
 
-            # Walidacja confidence threshold
             if confidence < settings.AI_CATEGORIZATION_CONFIDENCE_THRESHOLD:
+                outcome = "to_verify"
                 logger.info(
                     f"AI confidence za niska ({confidence}) dla produktu: {cleaned_text}"
                 )
                 return None
 
-            # Walidacja: czy kategoria nie jest null
             if not category_name:
                 logger.info(f"AI nie zaproponowało kategorii dla: {cleaned_text}")
                 return None
 
-            # Znajdź kategorię w dostępnych kategoriach (case-insensitive)
             for cat in available_categories:
                 if cat.name.lower() == category_name.lower():
+                    outcome = "accepted"
                     logger.info(
                         f"AI zaproponowało kategorię: {category_name} "
                         f"(confidence: {confidence}, reasoning: {reasoning})"
                     )
                     return cat.id
 
-            # Kategoria nie znaleziona w liście (AI zaproponowało coś spoza listy)
+            outcome = "to_verify"
             logger.warning(
                 f"AI zaproponowało nieistniejącą kategorię: {category_name} "
                 f"dla produktu: {cleaned_text}"
@@ -422,7 +449,19 @@ class AICategorizationService:
             return None
         except Exception as e:
             logger.error(f"Błąd wywołania Gemini API: {str(e)}", exc_info=True)
-            return None  # Fallback do kategorii "Inne"
+            return None
+        finally:
+            if invoked:
+                try:
+                    await self.usage.record_generative(
+                        user_id=user_id,
+                        model=settings.GEMINI_MODEL,
+                        tokens=tokens,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                        outcome=outcome,
+                    )
+                except Exception:
+                    logger.exception("Nie zapisano wywołania modelu")
 
     async def normalize_item(
         self,
@@ -511,6 +550,7 @@ class AICategorizationService:
             category_suggestion=ocr_item.category_suggestion,
             shop_name=shop_name,
             catalog_hits=catalog_hits,
+            user_id=user_id,
         )
 
         fallback_category = await self.category_service.get_fallback_category()

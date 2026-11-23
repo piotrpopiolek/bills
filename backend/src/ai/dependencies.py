@@ -16,6 +16,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.service import AICategorizationService
+from src.ai.usage import ModelUsage
 from src.categories.services import CategoryService
 from src.db.main import get_session as get_db
 from src.product_index_aliases.services import ProductIndexAliasService
@@ -35,7 +36,7 @@ async def get_ai_service(
         AICategorizationService: Gotowy do użycia serwis AI
     """
     # Utworzenie zależności
-    product_index_service = ProductIndexService(session)
+    product_index_service = ProductIndexService(session, usage=ModelUsage(session))
     alias_service = ProductIndexAliasService(session)
     category_service = CategoryService(session)
 

@@ -1,5 +1,6 @@
 """Import every mapped class so SQLAlchemy can configure relationships."""
 
+import src.ai.models  # noqa: F401
 import src.auth.models  # noqa: F401
 import src.bill_items.models  # noqa: F401
 import src.bills.models  # noqa: F401

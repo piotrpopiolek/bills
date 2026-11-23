@@ -44,6 +44,10 @@ class Settings(BaseSettings):
 
     # Freemium Limits
     MONTHLY_BILLS_LIMIT: int = 100  # Free tier limit per month
+    GENERATIVE_DAILY_LIMIT: int = 50
+    EMBEDDING_DAILY_LIMIT: int = 200
+    GENERATIVE_COST_PER_1K_TOKENS: float = 0.15
+    EMBEDDING_COST_PER_1K_TOKENS: float = 0.02
 
     # AI Categorization Service
     AI_SIMILARITY_THRESHOLD: float = (

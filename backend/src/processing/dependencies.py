@@ -12,6 +12,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.service import AICategorizationService
+from src.ai.usage import ModelUsage
 from src.bill_items.services import BillItemService
 from src.bills.services import BillService
 from src.categories.services import CategoryService
@@ -72,7 +73,7 @@ async def get_bills_processor_service(
     shop_service = ShopService(session)
 
     # AI Categorization Service dependencies
-    product_index_service = ProductIndexService(session)
+    product_index_service = ProductIndexService(session, usage=ModelUsage(session))
     alias_service = ProductIndexAliasService(session)
     category_service = CategoryService(session)
 

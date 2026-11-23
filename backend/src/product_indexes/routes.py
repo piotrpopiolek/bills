@@ -3,6 +3,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.ai.usage import ModelUsage
 from src.db.main import get_session
 from src.deps import CurrentUser
 from src.product_indexes.models import ProductIndex
@@ -20,7 +21,7 @@ router = APIRouter()
 async def get_product_index_service(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> ProductIndexService:
-    return ProductIndexService(session)
+    return ProductIndexService(session, usage=ModelUsage(session))
 
 
 ServiceDependency = Annotated[ProductIndexService, Depends(get_product_index_service)]

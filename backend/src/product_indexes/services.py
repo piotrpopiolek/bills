@@ -1,4 +1,5 @@
-from typing import cast
+import time
+from typing import Protocol, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -7,11 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.categories.models import Category
 from src.common.exceptions import ResourceAlreadyExistsError
 from src.common.services import AppService
+from src.config import settings
 from src.product_indexes.catalog import CatalogHit
 from src.product_indexes.embeddings import EmbeddingTask, ProductNameEmbedder
-from src.product_indexes.exceptions import EmbeddingError
+from src.product_indexes.exceptions import EmbeddingBudgetExceeded, EmbeddingError
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS, ProductIndex
 from src.product_indexes.schemas import ProductIndexCreate, ProductIndexUpdate
+
+
+class EmbeddingUsage(Protocol):
+    async def embedding_allowed(self) -> bool: ...
+
+    async def record_embedding(self, *, model: str, latency_ms: int) -> None: ...
 
 
 class ProductIndexService(
@@ -21,9 +29,11 @@ class ProductIndexService(
         self,
         session: AsyncSession,
         embedder: ProductNameEmbedder | None = None,
+        usage: EmbeddingUsage | None = None,
     ):
         super().__init__(model=ProductIndex, session=session)
         self._embedder = embedder
+        self._usage = usage
 
     def _name_embedder(self) -> ProductNameEmbedder:
         if self._embedder is None:
@@ -35,13 +45,27 @@ class ProductIndexService(
     async def _embedding_for(
         self, name: str, *, task_type: EmbeddingTask = "retrieval_document"
     ) -> list[float]:
+        if self._usage is not None and not await self._usage.embedding_allowed():
+            raise EmbeddingBudgetExceeded
+        started = time.perf_counter()
         vector = await self._name_embedder().embed_name(name, task_type=task_type)
+        if self._usage is not None:
+            await self._usage.record_embedding(
+                model=settings.GEMINI_EMBEDDING_MODEL,
+                latency_ms=int((time.perf_counter() - started) * 1000),
+            )
         if len(vector) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
             raise EmbeddingError(
                 f"Embedding ma {len(vector)} wymiarów, "
                 f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
             )
         return vector
+
+    async def _embedding_or_none(self, name: str) -> list[float] | None:
+        try:
+            return await self._embedding_for(name)
+        except EmbeddingBudgetExceeded:
+            return None
 
     async def embed_name(self, name: str) -> list[float]:
         """Embed an OCR query. Catalog rows stay retrieval_document."""
@@ -51,7 +75,10 @@ class ProductIndexService(
         """Store a missing embedding without committing the shared session."""
         if product.embedding is not None:
             return product
-        product.embedding = await self._embedding_for(product.name)
+        try:
+            product.embedding = await self._embedding_for(product.name)
+        except EmbeddingBudgetExceeded:
+            return product
         await self.session.flush([product])
         return product
 
@@ -136,7 +163,7 @@ class ProductIndexService(
         # Uniqueness Check (case-insensitive name)
         await self._ensure_unique_name(data.name)
 
-        embedding = await self._embedding_for(data.name)
+        embedding = await self._embedding_or_none(data.name)
         new_product_index = ProductIndex(
             name=data.name,
             synonyms=data.synonyms,
@@ -188,7 +215,7 @@ class ProductIndexService(
         new_name = update_data.get("name")
         if isinstance(new_name, str) and new_name != product_index.name:
             await self._ensure_unique_name(new_name, exclude_id=product_index.id)
-            update_data["embedding"] = await self._embedding_for(new_name)
+            update_data["embedding"] = await self._embedding_or_none(new_name)
 
         # Apply updates
         for key, value in update_data.items():
@@ -244,7 +271,7 @@ class ProductIndexService(
         if existing:
             return await self._backfill_embedding(existing)
 
-        embedding = await self._embedding_for(data.name)
+        embedding = await self._embedding_or_none(data.name)
         new_product_index = ProductIndex(
             name=data.name,
             synonyms=data.synonyms,

@@ -9,6 +9,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.ai.usage import ModelUsage
 from src.bill_items.services import BillItemService
 from src.bills.services import BillService
 from src.bills.verification_service import BillVerificationService
@@ -56,7 +57,7 @@ async def get_bill_verification_service(
 
     # ProductLearningService dependencies
     product_candidate_service = ProductCandidateService(session)
-    product_index_service = ProductIndexService(session)
+    product_index_service = ProductIndexService(session, usage=ModelUsage(session))
     alias_service = ProductIndexAliasService(session)
 
     product_learning_service = ProductLearningService(
