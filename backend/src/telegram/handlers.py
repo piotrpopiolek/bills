@@ -27,7 +27,7 @@ from src.telegram.utils import (
     format_weekly_report,
 )
 from src.users.services import UserService
-from src.worker.queue import enqueue_receipt
+from src.worker.queue import enqueue_receipt, receipt_job_active
 from telegram import CallbackQuery, Update
 from telegram.ext import ContextTypes
 
@@ -644,13 +644,19 @@ async def handle_receipt_image(
                     )
                     return
 
-                if existing_bill.status == ProcessingStatus.PROCESSING:
+                if existing_bill.status in (
+                    ProcessingStatus.PENDING,
+                    ProcessingStatus.PROCESSING,
+                ) and await receipt_job_active(existing_bill.id):
                     await status_message.edit_text(
                         f"Zdjęcie przyjęte.\nID: {existing_bill.id}"
                     )
                     return
 
-                if existing_bill.status == ProcessingStatus.ERROR:
+                if existing_bill.status in (
+                    ProcessingStatus.PROCESSING,
+                    ProcessingStatus.ERROR,
+                ):
                     await bill_service.update(
                         existing_bill.id,
                         BillUpdate(

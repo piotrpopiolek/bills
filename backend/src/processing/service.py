@@ -28,7 +28,11 @@ from src.common.exceptions import ResourceNotFoundError
 from src.config import settings
 from src.ocr.schemas import OCRItem, OCRReceiptData
 from src.ocr.services import OCRService
-from src.processing.exceptions import ProcessingError
+from src.processing.exceptions import (
+    ProcessingError,
+    ReceiptInProgress,
+    lock_miss_is_finished,
+)
 from src.shops.services import ShopService
 from src.storage.service import StorageService
 
@@ -98,11 +102,20 @@ class BillsProcessorService:
             # KRYTYCZNE: To zapobiega race condition - jeśli wiele procesów próbuje
             # przetworzyć ten sam paragon równolegle, tylko jeden przejmie lock.
             if not await self._try_acquire_processing_lock(bill_id):
-                # Inny proces już rozpoczął przetwarzanie - przerwij
+                self.session.expire(bill)
+                current = await self._get_bill(bill_id)
+                if lock_miss_is_finished(current.status):
+                    logger.info(
+                        "Bill %s nie dostał blokady, status=%s",
+                        bill_id,
+                        current.status.value,
+                    )
+                    return
                 logger.info(
-                    f"Bill {bill_id} is already being processed by another process, skipping"
+                    "Bill %s jest przetwarzany, zadanie zostanie ponowione",
+                    bill_id,
                 )
-                return
+                raise ReceiptInProgress(bill_id)
 
             # Step 3: Download file from Storage
             file_content = await self._download_file(bill.image_url)
@@ -216,6 +229,8 @@ class BillsProcessorService:
                 },
             )
 
+        except ReceiptInProgress:
+            raise
         except Exception as e:
             logger.error(
                 f"Error processing receipt bill_id={bill_id}: {e}", exc_info=True

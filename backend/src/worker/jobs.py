@@ -107,6 +107,8 @@ class WorkerSettings:
             name=PROCESS_RECEIPT_JOB,
             max_tries=settings.RECEIPT_JOB_MAX_TRIES,
             timeout=settings.RECEIPT_JOB_TIMEOUT_SECONDS,
+            # A stored result would block the same job id after the worker died.
+            keep_result=0,
         )
     ]
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)

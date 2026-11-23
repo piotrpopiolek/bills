@@ -12,8 +12,9 @@ async def test_accepted_photo_is_queued_and_counts(db_session, owned) -> None:
     user = await owned(EXTERNAL_ID)
     queued: list[int] = []
 
-    async def enqueue(bill_id: int) -> None:
+    async def enqueue(bill_id: int) -> bool:
         queued.append(bill_id)
+        return True
 
     update = _update(EXTERNAL_ID)
     await _run(db_session, user, update, enqueue)
