@@ -180,6 +180,8 @@ class ProductIndexAliasService(
         shop_id: int | None = None,
         user_id: int | None = None,
         locale: str = "pl_PL",
+        *,
+        commit: bool = True,
     ) -> ProductIndexAlias:
         """
         Atomowo tworzy lub aktualizuje alias produktu używając wzorca UPSERT.
@@ -238,8 +240,10 @@ class ProductIndexAliasService(
         result = await self.session.execute(stmt)
         alias = result.scalar_one()
 
-        # Commit transaction
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         await self.session.refresh(alias)
 
         return alias

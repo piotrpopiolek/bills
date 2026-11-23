@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import type { BillItemListResponse, ApiResponse } from '@/types';
 import { getBackendUrl } from '@/lib/utils/backend-url';
+import { proxyBackend } from '@/lib/server/backend-proxy';
 
 // Mark this route as dynamic (not prerendered)
 export const prerender = false;
@@ -14,6 +15,31 @@ const BillItemsQuerySchema = z.object({
   skip: z.coerce.number().int().min(0).default(0),
   limit: z.coerce.number().int().min(1).max(100).default(100),
 });
+
+const ItemCreateSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  quantity: z.coerce.number().positive(),
+  unit_price: z.coerce.number().min(0),
+  total_price: z.coerce.number().min(0),
+});
+
+export const POST: APIRoute = async ({ params, request, cookies }) => {
+  const billId = BillIdSchema.safeParse(params.id);
+  if (!billId.success) {
+    return new Response(JSON.stringify({ success: false, message: 'Nieprawidłowe ID paragonu' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const parsed = ItemCreateSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ success: false, message: 'Nieprawidłowe dane' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  return proxyBackend(cookies, `/api/bills/${billId.data}/items`, 'POST', parsed.data);
+};
 
 export const GET: APIRoute = async ({ params, url, cookies }) => {
   // Validate bill_id from path parameters

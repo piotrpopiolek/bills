@@ -11,17 +11,22 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfidenceIndicator } from './ConfidenceIndicator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Check } from 'lucide-react';
+import { Check, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface BillItemsTableProps {
   items: BillItemResponse[];
   isLoading: boolean;
+  onEdit?: (item: BillItemResponse) => void;
+  onDelete?: (item: BillItemResponse) => void;
 }
 
 export const BillItemsTable: React.FC<BillItemsTableProps> = ({
   items,
   isLoading,
+  onEdit,
+  onDelete,
 }) => {
   // Format number from string, removing trailing zeros
   const formatNumber = (value: string): string => {
@@ -66,6 +71,7 @@ export const BillItemsTable: React.FC<BillItemsTableProps> = ({
               <TableHead className="text-right">Cena całkowita</TableHead>
               <TableHead>Pewność</TableHead>
               <TableHead className="hidden md:table-cell">Status</TableHead>
+              <TableHead>Akcje</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -94,6 +100,9 @@ export const BillItemsTable: React.FC<BillItemsTableProps> = ({
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <Skeleton className="h-4 w-[60px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[80px]" />
                 </TableCell>
               </TableRow>
             ))}
@@ -124,6 +133,7 @@ export const BillItemsTable: React.FC<BillItemsTableProps> = ({
             <TableHead className="text-right">Cena całkowita</TableHead>
             <TableHead>Pewność</TableHead>
             <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead>Akcje</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -194,6 +204,26 @@ export const BillItemsTable: React.FC<BillItemsTableProps> = ({
                   ) : (
                     <span className="text-sm text-muted-foreground">Niezweryfikowane</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit?.(item)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDelete?.(item)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             );

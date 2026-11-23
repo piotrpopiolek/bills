@@ -2,12 +2,42 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import type { BillResponse, ApiResponse } from '@/types';
 import { getBackendUrl } from '@/lib/utils/backend-url';
+import { proxyBackend } from '@/lib/server/backend-proxy';
 
 // Mark this route as dynamic (not prerendered)
 export const prerender = false;
 
 // Zod schema for path parameter validation
 const BillIdSchema = z.coerce.number().int().positive();
+
+const BillPatchSchema = z
+  .object({
+    bill_date: z.string().min(1).optional(),
+    shop_id: z.number().int().positive().optional(),
+    shop_name: z.string().trim().min(1).max(255).optional(),
+  })
+  .refine((value) => value.bill_date || value.shop_id || value.shop_name, {
+    message: 'Brak zmian',
+  });
+
+export const PATCH: APIRoute = async ({ params, request, cookies }) => {
+  const billId = BillIdSchema.safeParse(params.id);
+  if (!billId.success) {
+    return new Response(JSON.stringify({ success: false, message: 'Nieprawidłowe ID paragonu' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = BillPatchSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ success: false, message: 'Nieprawidłowe dane' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  return proxyBackend(cookies, `/api/bills/${billId.data}`, 'PATCH', parsed.data);
+};
 
 export const GET: APIRoute = async ({ params, cookies }) => {
   // Validate bill_id from path parameters

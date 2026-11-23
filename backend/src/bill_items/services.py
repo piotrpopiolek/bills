@@ -45,7 +45,9 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         response.category_name = category_name
         return response
 
-    async def create(self, data: BillItemCreate) -> BillItemResponse:  # type: ignore[override]
+    async def create(  # type: ignore[override]
+        self, data: BillItemCreate, *, commit: bool = True
+    ) -> BillItemResponse:
         # Bill Existence Check (Referential Integrity check before DB hit)
         await self._ensure_exists(
             model=Bill, field=Bill.id, value=data.bill_id, resource_name="Bill"
@@ -78,7 +80,10 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         self.session.add(new_bill_item)
 
         try:
-            await self.session.commit()
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
             # Reload bill item with index and category relationships for response using eager loading
             stmt = (
                 select(BillItem)
@@ -94,7 +99,12 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         return self._to_response(new_bill_item)
 
     async def update(  # type: ignore[override]
-        self, bill_item_id: int, data: BillItemUpdate, user_id: int | None = None
+        self,
+        bill_item_id: int,
+        data: BillItemUpdate,
+        user_id: int | None = None,
+        *,
+        commit: bool = True,
     ) -> BillItemResponse:
         """
         Aktualizuje BillItem z opcjonalną weryfikacją ownership.
@@ -171,7 +181,10 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
             setattr(bill_item, key, value)
 
         try:
-            await self.session.commit()
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
             # Reload bill item with index and category relationships for response using eager loading
             stmt = (
                 select(BillItem)

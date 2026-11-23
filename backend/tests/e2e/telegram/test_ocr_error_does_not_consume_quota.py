@@ -1,14 +1,22 @@
-"""A queued photo counts. A queue failure does not."""
+"""A queued photo does not use a monthly slot. A failed OCR pass does not either."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from tests.support import bill_count
+import pytest
+import tests.orm  # noqa: F401
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from tests.support import bill_count, insert_pending_bill
+
+from src.bills.models import ProcessingStatus
+from src.config import settings
 
 EXTERNAL_ID = 8_100_001_801
 
 
-async def test_accepted_photo_is_queued_and_counts(db_session, owned) -> None:
+async def test_accepted_photo_is_queued_without_using_the_quota(
+    db_session, owned
+) -> None:
     user = await owned(EXTERNAL_ID)
     queued: list[int] = []
 
@@ -21,7 +29,7 @@ async def test_accepted_photo_is_queued_and_counts(db_session, owned) -> None:
 
     assert queued
     counted = await bill_count(db_session, user.id)
-    assert counted == 1
+    assert counted == 0
     update.message.reply_text.return_value.edit_text.assert_awaited_with(
         f"Zdjęcie przyjęte.\nID: {queued[0]}"
     )
@@ -41,6 +49,30 @@ async def test_queue_failure_does_not_consume_monthly_quota(db_session, owned) -
     update.message.reply_text.return_value.edit_text.assert_awaited_with(
         "Nie udało się przyjąć zdjęcia. Spróbuj ponownie."
     )
+
+
+async def test_worker_ocr_failure_does_not_consume_monthly_quota(
+    db_session, owned, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from src.worker.jobs import process_receipt_job
+
+    user = await owned(EXTERNAL_ID + 2)
+    bill = await insert_pending_bill(db_session, user.id)
+    maker = async_sessionmaker(db_session.bind, expire_on_commit=False)
+    monkeypatch.setattr("src.worker.jobs.session_factory", lambda: maker)
+    monkeypatch.setattr(settings, "RECEIPT_JOB_MAX_TRIES", 1)
+
+    async def boom(_bill_id: int) -> None:
+        raise RuntimeError("ocr down")
+
+    monkeypatch.setattr("src.worker.jobs.run_receipt", boom)
+
+    with pytest.raises(RuntimeError, match="ocr down"):
+        await process_receipt_job({"job_try": 1}, bill.id)
+
+    await db_session.refresh(bill)
+    assert bill.status == ProcessingStatus.ERROR
+    assert await bill_count(db_session, user.id) == 0
 
 
 async def _run(db_session, user, update, enqueue) -> None:

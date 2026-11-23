@@ -124,6 +124,7 @@ class BillService(AppService[Bill, BillCreate, BillUpdate]):
             raise BillAccessDeniedError(bill_id)
 
         update_data = data.model_dump(exclude_unset=True)
+        update_data.pop("shop_name", None)
 
         if not update_data:
             # Even if no updates, return BillResponse with signed URL and shop_name

@@ -3,13 +3,20 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bill_items.schemas import BillItemListResponse
+from src.bill_items.schemas import (
+    BillItemListResponse,
+    BillItemResponse,
+    UserItemCreate,
+    UserItemWrite,
+)
 from src.bill_items.services import BillItemService
+from src.bills.correction import ReceiptCorrection
 from src.bills.schemas import BillCreate, BillListResponse, BillResponse, BillUpdate
 from src.bills.services import BillService
 from src.db.main import get_session
 from src.deps import CurrentUser
 from src.middleware.rate_limit import check_monthly_bills_limit
+from src.shops.services import ShopService
 from src.storage.service import StorageService, get_storage_service
 
 router = APIRouter()
@@ -85,6 +92,67 @@ async def get_bill_items(
 
 
 @router.post(
+    "/{bill_id}/items",
+    response_model=BillItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a receipt line",
+)
+async def add_bill_item(
+    bill_id: int,
+    data: UserItemCreate,
+    service: ServiceDependency,
+    user: CurrentUser,
+) -> BillItemResponse:
+    return await ReceiptCorrection(service.session).add_item(
+        bill_id=bill_id,
+        user_id=user.id,
+        name=data.name,
+        quantity=data.quantity,
+        unit_price=data.unit_price,
+        total_price=data.total_price,
+    )
+
+
+@router.patch(
+    "/{bill_id}/items/{item_id}",
+    response_model=BillItemResponse,
+    summary="Correct a receipt line",
+)
+async def correct_bill_item(
+    bill_id: int,
+    item_id: int,
+    data: UserItemWrite,
+    service: ServiceDependency,
+    user: CurrentUser,
+) -> BillItemResponse:
+    return await ReceiptCorrection(service.session).save_item(
+        bill_id=bill_id,
+        item_id=item_id,
+        user_id=user.id,
+        name=data.name,
+        quantity=data.quantity,
+        unit_price=data.unit_price,
+        total_price=data.total_price,
+    )
+
+
+@router.delete(
+    "/{bill_id}/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a receipt line",
+)
+async def delete_bill_item(
+    bill_id: int,
+    item_id: int,
+    service: ServiceDependency,
+    user: CurrentUser,
+) -> None:
+    await ReceiptCorrection(service.session).delete_item(
+        bill_id=bill_id, item_id=item_id, user_id=user.id
+    )
+
+
+@router.post(
     "/",
     response_model=BillResponse,
     status_code=status.HTTP_201_CREATED,
@@ -110,9 +178,13 @@ async def update_bill(
 ) -> BillResponse:
     """
     Update a bill by ID for the authenticated user.
-    Enforces user isolation - returns 403 if bill doesn't belong to the current user.
-    Note: user_id cannot be changed via this endpoint.
+    A typed shop name is normalized. Date and shop do not call the model.
     """
+    if data.shop_name and data.shop_name.strip():
+        shop = await ShopService(service.session).get_or_create_by_name(
+            data.shop_name.strip()
+        )
+        data = data.model_copy(update={"shop_id": shop.id})
     return await service.update(bill_id=bill_id, data=data, user_id=user.id)
 
 

@@ -11,6 +11,16 @@ from src.config import settings
 from src.users.models import User
 from src.users.schemas import UserCreate, UserUpdate
 
+_MONTHLY_QUOTA_STATUSES = (
+    ProcessingStatus.COMPLETED,
+    ProcessingStatus.TO_VERIFY,
+)
+
+
+def receipt_counts_toward_monthly_limit(status: ProcessingStatus) -> bool:
+    """OCR success uses a monthly slot. A queued or failed pass does not."""
+    return status in _MONTHLY_QUOTA_STATUSES
+
 
 class UserService(AppService[User, UserCreate, UserUpdate]):
     def __init__(self, session: AsyncSession):
@@ -125,14 +135,15 @@ class UserService(AppService[User, UserCreate, UserUpdate]):
         """
         Count bills that consume the user's monthly freemium quota.
 
-        A receipt that failed OCR stays in the database with status ERROR so the
-        user can see the failure, but it does not use one of the 100 monthly slots.
+        Only a receipt OCR kept (completed or to verify) uses a slot. A queued
+        photo is still pending, and a failed pass stays ERROR for the user.
+        Neither uses one of the 100 monthly slots.
 
         Args:
             user_id: User ID to count bills for
 
         Returns:
-            Number of non-error bills created in the current month
+            Number of kept receipts created in the current month
         """
         # Get first and last day of current month (timezone-aware)
         now = datetime.now(UTC)
@@ -143,12 +154,11 @@ class UserService(AppService[User, UserCreate, UserUpdate]):
         else:
             month_end = datetime(now.year, now.month + 1, 1, tzinfo=UTC)
 
-        # ERROR rows are kept for the user, but a failed OCR pass is not a receipt.
         stmt = select(func.count(Bill.id)).where(
             Bill.user_id == user_id,
             Bill.created_at >= month_start,
             Bill.created_at < month_end,
-            Bill.status != ProcessingStatus.ERROR,
+            Bill.status.in_(_MONTHLY_QUOTA_STATUSES),
         )
 
         result = await self.session.execute(stmt)

@@ -254,7 +254,9 @@ class ProductIndexService(
 
         return product_index
 
-    async def create_or_get_existing(self, data: ProductIndexCreate) -> ProductIndex:
+    async def create_or_get_existing(
+        self, data: ProductIndexCreate, *, commit: bool = True
+    ) -> ProductIndex:
         """
         Tworzy nowy ProductIndex lub zwraca istniejący, jeśli nazwa już istnieje (case-insensitive).
 
@@ -302,7 +304,10 @@ class ProductIndexService(
         self.session.add(new_product_index)
 
         try:
-            await self.session.commit()
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
             await self.session.refresh(new_product_index)
         except IntegrityError as e:
             await self.session.rollback()

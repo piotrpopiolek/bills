@@ -1,4 +1,4 @@
-import type { BillsQueryParams, BillListResponse, ApiResponse, BillResponse, BillItemListResponse, PendingVerificationQueryParams } from '../../types';
+import type { BillsQueryParams, BillListResponse, ApiResponse, BillResponse, BillItemListResponse, BillItemResponse, PendingVerificationQueryParams } from '../../types';
 import { apiFetch } from '../api-client';
 
 export const getBills = async (params: BillsQueryParams): Promise<BillListResponse> => {
@@ -145,5 +145,67 @@ export const getBillItems = async (
     console.error('Error fetching bill items:', error);
     throw error;
   }
+};
+
+async function readProxy<T>(response: Response, fallback: string): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  const body: { success?: boolean; message?: string; data?: T } = await response.json().catch(() => ({}));
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || fallback);
+  }
+  return body.data as T;
+}
+
+export const updateBill = async (
+  billId: number,
+  patch: { bill_date?: string; shop_id?: number; shop_name?: string },
+): Promise<BillResponse> => {
+  const response = await apiFetch(`/api/bills/${billId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  return readProxy<BillResponse>(response, 'Nie udało się zapisać paragonu');
+};
+
+export interface ItemWrite {
+  name?: string;
+  quantity?: number;
+  unit_price?: number;
+  total_price?: number;
+}
+
+export const createBillItem = async (
+  billId: number,
+  item: Required<ItemWrite>,
+): Promise<BillItemResponse> => {
+  const response = await apiFetch(`/api/bills/${billId}/items`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item),
+  });
+  return readProxy<BillItemResponse>(response, 'Nie udało się dodać pozycji');
+};
+
+export const updateBillItem = async (
+  billId: number,
+  itemId: number,
+  patch: ItemWrite,
+): Promise<BillItemResponse> => {
+  const response = await apiFetch(`/api/bills/${billId}/items/${itemId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  return readProxy<BillItemResponse>(response, 'Nie udało się zapisać pozycji');
+};
+
+export const deleteBillItem = async (billId: number, itemId: number): Promise<void> => {
+  const response = await apiFetch(`/api/bills/${billId}/items/${itemId}`, {
+    method: 'DELETE',
+  });
+  await readProxy<void>(response, 'Nie udało się usunąć pozycji');
 };
 

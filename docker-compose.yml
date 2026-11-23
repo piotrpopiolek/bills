@@ -65,7 +65,10 @@ services:
       dockerfile: backend/Dockerfile
     container_name: bills-worker
     working_dir: /app
-    entrypoint: ['arq', 'src.worker.jobs.WorkerSettings']
+    entrypoint:
+      - python
+      - -c
+      - import asyncio, sys; asyncio.set_event_loop(asyncio.new_event_loop()); sys.argv=['arq','src.worker.jobs.WorkerSettings']; from arq.cli import cli; cli()
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     environment:

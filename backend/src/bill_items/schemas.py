@@ -98,6 +98,22 @@ class BillItemCreate(BillItemBase):
     pass
 
 
+class UserItemWrite(AppBaseModel):
+    """Fields a person can change. Name is the only one that touches the catalog."""
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+    quantity: Decimal | None = Field(None, gt=0)
+    unit_price: Decimal | None = Field(None, ge=0)
+    total_price: Decimal | None = Field(None, ge=0)
+
+
+class UserItemCreate(AppBaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    quantity: Decimal = Field(..., gt=0)
+    unit_price: Decimal = Field(..., ge=0)
+    total_price: Decimal = Field(..., ge=0)
+
+
 class BillItemUpdate(AppBaseModel, BillItemValidationMixin):
     quantity: Decimal | None = Field(None, gt=0, description="Quantity of the item")
 

@@ -1,6 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useBillDetail } from '@/components/hooks/useBillDetail';
 import { useBillItems } from '@/components/hooks/useBillItems';
+import { getShops } from '@/lib/services/shops';
+import {
+  createBillItem,
+  deleteBillItem,
+  updateBill,
+  updateBillItem,
+} from '@/lib/services/bills';
+import type { ShopResponse } from '@/types';
 import { BillHeader } from './BillHeader';
 import { BillMetadata } from './BillMetadata';
 import { BillImageViewer } from './BillImageViewer';
@@ -26,21 +34,29 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({ billId }) => {
     error: itemsError,
     refetch: refetchItems,
   } = useBillItems(billId);
+  const [shops, setShops] = useState<ShopResponse[]>([]);
 
-  // Polling statusu paragonu, gdy status === "processing"
   useEffect(() => {
-    if (!bill || bill.status !== 'processing') {
+    void getShops({ limit: 100, skip: 0 })
+      .then((page) => setShops(page.items ?? []))
+      .catch(() => setShops([]));
+  }, []);
+
+  const waiting = bill?.status === 'processing' || bill?.status === 'pending';
+  useEffect(() => {
+    if (!waiting) {
       return;
     }
 
     const intervalId = setInterval(() => {
-      refetchBill();
-    }, 5000); // Polling co 5 sekund
+      void refetchBill();
+      void refetchItems();
+    }, 5000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [bill?.status, refetchBill]);
+  }, [waiting, refetchBill, refetchItems]);
 
   // Handle shop click navigation
   const handleShopClick = (shopId: number) => {
@@ -118,7 +134,15 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({ billId }) => {
     <div className="container mx-auto py-10 px-4 md:px-6 space-y-6">
       <BillHeader billId={bill.id} status={bill.status} />
 
-      <BillMetadata bill={bill} onShopClick={handleShopClick} />
+      <BillMetadata
+        bill={bill}
+        shops={shops}
+        onShopClick={handleShopClick}
+        onSave={async (patch) => {
+          await updateBill(bill.id, patch);
+          await refetchBill();
+        }}
+      />
 
       {itemsError && (
         <div className="rounded-md border border-destructive p-4">
@@ -141,6 +165,18 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({ billId }) => {
         items={items}
         isLoading={isItemsLoading}
         totalAmount={bill.total_amount}
+        onCreateItem={async (item) => {
+          await createBillItem(bill.id, item);
+          await refetchItems();
+        }}
+        onSaveItem={async (itemId, patch) => {
+          await updateBillItem(bill.id, itemId, patch);
+          await refetchItems();
+        }}
+        onDeleteItem={async (itemId) => {
+          await deleteBillItem(bill.id, itemId);
+          await refetchItems();
+        }}
       />
 
       <BillImageViewer

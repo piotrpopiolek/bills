@@ -118,6 +118,12 @@ class BillUpdate(AppBaseModel, BillValidationMixin):
 
     shop_id: int | None = Field(None, gt=0, description="Shop ID")
 
+    shop_name: str | None = Field(
+        None,
+        max_length=255,
+        description="Shop name to normalize and attach. Does not call the model.",
+    )
+
     image_url: str | None = Field(None, description="Image URL")
 
     image_hash: str | None = Field(None, max_length=64, description="Image hash")

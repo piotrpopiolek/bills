@@ -16,17 +16,18 @@
 
 ## Project description
 
-Bills automates personal expense tracking by letting users send receipt photos to a Telegram bot. The system uses OCR to extract line items, applies AI to normalize and categorize products, validates the sum against the receipt total, and stores the data for summaries. A read‑only web app complements the bot with clear summaries and a passwordless “magic link” login delivered by the bot.
+Bills tracks spending from receipt photos. The bot accepts a photo and replies at once that it was received. An ARQ worker runs the read in the background. One Gemini model reads the receipt and, when the catalog is not enough, normalizes the product name. Product-name embeddings live in pgvector, and the prompt receives the recovered catalog. There is a daily cost limit. The app shows the bill and lets the user correct line items, the shop, and the date. There are no multi-step agents, no MCP, and no company document store.
+
+CV line: In my own project, Bills, receipt reading goes through Gemini. Product names are embeddings in pgvector. The normalization prompt receives the recovered catalog. There is a daily cost limit. This is not a client deployment.
 
 Key highlights:
 
-- Capture receipts via Telegram; instant confirmation and processing.
-- OCR with high‑quality text extraction; AI normalization and categorization to predefined categories, with fallback to “Other”.
-- Low‑confidence items can be confirmed by the user directly in the bot.
-- Text summaries available in the bot (daily/weekly/monthly).
-- Read‑only web app for visual summaries; login via one‑time magic link.
-- Freemium plan: up to 100 receipts per month; warnings at 90; blocks at 101 with reset info.
-- Privacy by design: avoid processing personal data from receipts; simple privacy policy accessible in the bot.
+- Telegram accepts a photo and replies that it was received. An ARQ worker processes the bill in the background.
+- One Gemini model reads the receipt and, below the catalog threshold, normalizes the name. Product-name embeddings are in pgvector.
+- Alias first, then vector search beside pg_trgm. Above the threshold the generative model is not called.
+- A daily limit on generative calls and a separate embedding budget. A failed read does not use one of the 100 monthly receipts.
+- The app shows the bill and corrects line items, the shop, and the date. Renaming a product stores an alias. Status refreshes by polling.
+- Login uses a magic link from the bot.
 
 For full product details, see the PRD:
 
@@ -41,8 +42,10 @@ For full product details, see the PRD:
   - sentry-sdk (logging/monitoring)
   - Supabase (PostgreSQL database, Storage, Auth, migrations)
 - Data & AI:
-  - **OCR:** Google Gemini API
-  - OpenAI API (categorization & normalization)
+  - Google Gemini: one generative model and one embedding model
+  - pgvector and pg_trgm in Postgres
+  - LangChain only when building the catalog prompt
+  - Redis and an ARQ worker
 - Frontend:
   - Astro 5 (static site generation, routing)
   - React 19 (interactive components - Islands Architecture)
@@ -136,8 +139,8 @@ python -m venv .venv
 # 3) Install dependencies
 uv sync --frozen
 
-# 4) Run database migrations (Alembic)
-alembic upgrade head
+# 4) Apply SQL migrations from supabase/migrations
+# Local Supabase: supabase migration up --local
 
 # 5) Start the API server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -149,7 +152,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 - For local development:
   - Either run in polling mode within your bot service, or
   - Expose a public URL for webhooks (e.g., ngrok) and set `TELEGRAM_WEBHOOK_URL`.
-- Commands supported by MVP (as per PRD): `/start`, `/dzis`, `/tydzien`, `/miesiac`, `/login`, `/prywatnosc`.
+- Bot commands in this release: `/start`, `/login`, `/prywatnosc`, plus a receipt photo. The worker command is `arq src.worker.jobs.WorkerSettings`.
 
 ### Frontend (Astro + React + Tailwind)
 
@@ -185,9 +188,8 @@ If you need a unified entrypoint, configure Nginx to proxy to:
 - Backend (from `backend/` directory)
 
   - Start API (dev): `uvicorn main:app --reload --port 8000`
-  - Run migrations: `alembic upgrade head`
-  - Generate migration: `alembic revision --autogenerate -m "message"`
-  - Lint (example): `ruff check .` or `flake8`
+  - Migrations: SQL files in `supabase/migrations` (`supabase migration up --local`)
+  - Lint: `uv run ruff check src tests` and `uv run ruff format --check src tests`
   - Tests: `pytest -q`
   - Tests with coverage: `pytest --cov=src --cov-report=html`
 
@@ -207,15 +209,14 @@ If you need a unified entrypoint, configure Nginx to proxy to:
 
 In scope (MVP):
 
-- Telegram bot to accept receipt photos and simple text commands.
-- OCR extraction of line items (using Gemini API for MVP).
-- AI-based normalization and categorization into predefined categories; low-confidence items go through user confirmation.
-- Receipt total validation versus sum of items.
-- Text summaries in the bot: daily, weekly, monthly.
-- Read-only web app with the same summaries as in the bot.
-- Passwordless login to the web app via bot-provided magic link.
-- Freemium model: 100 receipts/month; notify at 90; block at 101; show reset date.
-- Privacy policy available through a bot command; avoid processing personal data from receipts.
+- Telegram bot: login, receipt photo, and the accepted-photo reply. Processing runs on the ARQ worker.
+- One Gemini model for OCR and for catalog-miss categorization. Product-name embeddings in pgvector.
+- Alias, then vector search beside pg_trgm. The generative model is not called above the similarity threshold.
+- Daily generative limit and a separate embedding budget.
+- Web app: bill status (polled), correction of lines, shop, and date. A renamed product stores an alias.
+- The app shows the difference between the line sum and the receipt total. That 20% OCR check stays on the read, not on a user edit.
+- Passwordless login via a magic link from the bot.
+- Freemium: 100 kept receipts per month. A queued or failed read does not use a slot.
 
 Out of scope (MVP):
 
@@ -277,7 +278,7 @@ npm run test:coverage
 #### E2E Tests (Playwright)
 
 ```bash
-# Z katalogu astro/
+# From the astro/ directory
 cd astro
 
 # Run all E2E tests
