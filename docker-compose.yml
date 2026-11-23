@@ -10,6 +10,8 @@ services:
       - '8001:8000'
     extra_hosts:
       - 'host.docker.internal:host-gateway'
+    env_file:
+      - backend/.env
     environment:
       - PORT=8000
       # Host .env points at 127.0.0.1:54322 (local Supabase). Inside this
@@ -19,10 +21,6 @@ services:
       # address is the container itself.
       - SUPABASE_URL=http://host.docker.internal:54321
       - WEB_APP_URL=http://localhost:8082
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
       - REDIS_URL=redis://redis:6379/0
       - ENV=development
     depends_on:
@@ -74,15 +72,13 @@ services:
       - import asyncio, sys; asyncio.set_event_loop(asyncio.new_event_loop()); sys.argv=['arq','src.worker.jobs.WorkerSettings']; from arq.cli import cli; cli()
     extra_hosts:
       - 'host.docker.internal:host-gateway'
+    env_file:
+      - backend/.env
     environment:
       - PORT=8000
       - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
       - SUPABASE_URL=http://host.docker.internal:54321
       - WEB_APP_URL=http://localhost:8082
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
       - REDIS_URL=redis://redis:6379/0
       - ENV=development
     depends_on:
