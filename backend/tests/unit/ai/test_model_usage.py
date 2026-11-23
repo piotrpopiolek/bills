@@ -16,6 +16,13 @@ def test_call_cost_uses_the_per_thousand_token_rate() -> None:
     assert call_cost(None, 0.15) == Decimal("0")
 
 
+def test_lock_keys_do_not_collide() -> None:
+    from src.ai.usage import _lock_key
+
+    assert _lock_key("embedding", None) != _lock_key("generative", 1)
+    assert _lock_key("generative", 1) != _lock_key("generative", 2)
+
+
 def test_limit_blocks_at_the_boundary() -> None:
     assert generative_call_allowed(49, 50) is True
     assert generative_call_allowed(50, 50) is False
@@ -37,11 +44,11 @@ async def test_spent_limit_does_not_call_the_model() -> None:
 
 async def test_embedding_budget_does_not_call_the_model() -> None:
     class SpentBudget:
-        async def embedding_allowed(self) -> bool:
-            return False
+        async def try_reserve_embedding(self, *, model: str) -> int | None:
+            return None
 
-        async def record_embedding(self, *, model: str, latency_ms: int) -> None:
-            raise AssertionError(model)
+        async def finish_embedding(self, call_id: int, *, latency_ms: int) -> None:
+            raise AssertionError(call_id)
 
     embedder = FrozenProductNameEmbedder()
     service = ProductIndexService(AsyncMock(), embedder, usage=SpentBudget())

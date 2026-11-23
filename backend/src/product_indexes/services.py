@@ -1,4 +1,4 @@
-import time
+from contextvars import ContextVar
 from typing import Protocol, cast
 
 from sqlalchemy import func, select
@@ -17,9 +17,14 @@ from src.product_indexes.schemas import ProductIndexCreate, ProductIndexUpdate
 
 
 class EmbeddingUsage(Protocol):
-    async def embedding_allowed(self) -> bool: ...
+    async def try_reserve_embedding(self, *, model: str) -> int | None: ...
 
-    async def record_embedding(self, *, model: str, latency_ms: int) -> None: ...
+    async def finish_embedding(self, call_id: int, *, latency_ms: int) -> None: ...
+
+
+_embedding_reservation: ContextVar[int | None] = ContextVar(
+    "embedding_reservation", default=None
+)
 
 
 class ProductIndexService(
@@ -45,21 +50,35 @@ class ProductIndexService(
     async def _embedding_for(
         self, name: str, *, task_type: EmbeddingTask = "retrieval_document"
     ) -> list[float]:
-        if self._usage is not None and not await self._usage.embedding_allowed():
-            raise EmbeddingBudgetExceeded
-        started = time.perf_counter()
-        vector = await self._name_embedder().embed_name(name, task_type=task_type)
-        if self._usage is not None:
-            await self._usage.record_embedding(
-                model=settings.GEMINI_EMBEDDING_MODEL,
-                latency_ms=int((time.perf_counter() - started) * 1000),
-            )
+        vector = await self._name_embedder().embed_name(
+            name,
+            task_type=task_type,
+            before_attempt=self._reject_if_over_budget,
+            on_attempt=self._record_embedding_attempt,
+        )
         if len(vector) != PRODUCT_INDEX_EMBEDDING_DIMENSIONS:
             raise EmbeddingError(
                 f"Embedding ma {len(vector)} wymiarów, "
                 f"oczekiwano {PRODUCT_INDEX_EMBEDDING_DIMENSIONS}."
             )
         return vector
+
+    async def _reject_if_over_budget(self) -> None:
+        if self._usage is None:
+            return
+        call_id = await self._usage.try_reserve_embedding(
+            model=settings.GEMINI_EMBEDDING_MODEL
+        )
+        if call_id is None:
+            raise EmbeddingBudgetExceeded
+        _embedding_reservation.set(call_id)
+
+    async def _record_embedding_attempt(self, latency_ms: int) -> None:
+        call_id = _embedding_reservation.get()
+        if self._usage is None or call_id is None:
+            return
+        await self._usage.finish_embedding(call_id, latency_ms=latency_ms)
+        _embedding_reservation.set(None)
 
     async def _embedding_or_none(self, name: str) -> list[float] | None:
         try:

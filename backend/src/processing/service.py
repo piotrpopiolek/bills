@@ -17,7 +17,7 @@ from starlette.datastructures import Headers
 
 from src.ai.schemas import NormalizedItem
 from src.ai.service import AICategorizationService
-from src.ai.usage import CallOutcome, ModelUsage, generative_call_allowed
+from src.ai.usage import CallOutcome, ModelUsage
 from src.bill_items.models import VerificationSource
 from src.bill_items.schemas import BillItemCreate
 from src.bill_items.services import BillItemService
@@ -107,21 +107,20 @@ class BillsProcessorService:
             # Step 3: Download file from Storage
             file_content = await self._download_file(bill.image_url)
 
-            # Step 4: Call OCR Service, unless today's generative budget is spent.
+            # Step 4: Reserve a generative slot, then call OCR.
+            reserved_id = None
             if bill.user_id is not None:
-                used_today = await ModelUsage(self.session).generative_used_today(
-                    bill.user_id
+                reserved_id = await ModelUsage(self.session).try_reserve_generative(
+                    user_id=bill.user_id, model=settings.GEMINI_MODEL
                 )
-                if not generative_call_allowed(
-                    used_today, settings.GENERATIVE_DAILY_LIMIT
-                ):
+                if reserved_id is None:
                     await self._set_error(
                         bill_id, "Dzienny limit modelu został wyczerpany"
                     )
                     return
 
             ocr_data = await self._extract_receipt_data(
-                file_content, bill.image_url, bill.user_id
+                file_content, bill.image_url, bill.user_id, reserved_id
             )
 
             # Step 5: Get or create Shop
@@ -240,7 +239,11 @@ class BillsProcessorService:
         return file_content
 
     async def _extract_receipt_data(
-        self, file_content: bytes, filename: str, user_id: int | None
+        self,
+        file_content: bytes,
+        filename: str,
+        user_id: int | None,
+        reserved_id: int | None,
     ) -> OCRReceiptData:
         """
         Extract receipt data using OCR Service.
@@ -266,20 +269,34 @@ class BillsProcessorService:
         try:
             ocr_data = await self.ocr_service.extract_data(upload_file)
         except Exception:
-            await self._record_ocr(user_id, started, "rejected")
+            await self._record_ocr(user_id, reserved_id, started, "rejected")
             raise
-        await self._record_ocr(user_id, started, "accepted")
+        await self._record_ocr(user_id, reserved_id, started, "accepted")
         return ocr_data
 
     async def _record_ocr(
-        self, user_id: int | None, started: float, outcome: CallOutcome
+        self,
+        user_id: int | None,
+        reserved_id: int | None,
+        started: float,
+        outcome: CallOutcome,
     ) -> None:
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        usage = ModelUsage(self.session)
         try:
-            await ModelUsage(self.session).record_generative(
+            if reserved_id is not None:
+                await usage.finish_generative(
+                    reserved_id,
+                    tokens=None,
+                    latency_ms=latency_ms,
+                    outcome=outcome,
+                )
+                return
+            await usage.record_generative(
                 user_id=user_id,
                 model=settings.GEMINI_MODEL,
                 tokens=None,
-                latency_ms=int((time.perf_counter() - started) * 1000),
+                latency_ms=latency_ms,
                 outcome=outcome,
             )
         except Exception:

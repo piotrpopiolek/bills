@@ -1,13 +1,23 @@
+from collections.abc import Awaitable, Callable
 from typing import Literal, Protocol
 
 from src.product_indexes.exceptions import EmbeddingError
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS
 
 EmbeddingTask = Literal["retrieval_document", "retrieval_query"]
+BeforeAttempt = Callable[[], Awaitable[None]]
+OnAttempt = Callable[[int], Awaitable[None]]
 
 
 class ProductNameEmbedder(Protocol):
-    async def embed_name(self, name: str, *, task_type: EmbeddingTask) -> list[float]:
+    async def embed_name(
+        self,
+        name: str,
+        *,
+        task_type: EmbeddingTask,
+        before_attempt: BeforeAttempt | None = None,
+        on_attempt: OnAttempt | None = None,
+    ) -> list[float]:
         """Return a 768-dimensional embedding of a product name."""
 
 

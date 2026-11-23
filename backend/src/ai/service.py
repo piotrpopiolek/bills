@@ -16,7 +16,7 @@ from src.ai.confidence import (
     normalization_confidence,
 )
 from src.ai.schemas import NormalizedItem
-from src.ai.usage import CallOutcome, ModelUsage, generative_call_allowed
+from src.ai.usage import CallOutcome, ModelUsage
 from src.categories.models import Category
 from src.categories.schemas import CategoryResponse
 from src.categories.services import CategoryService
@@ -400,9 +400,12 @@ class AICategorizationService:
             category_names=[cat.name for cat in available_categories],
         )
 
+        reserved_id: int | None = None
         if user_id is not None:
-            used_today = await self.usage.generative_used_today(user_id)
-            if not generative_call_allowed(used_today, settings.GENERATIVE_DAILY_LIMIT):
+            reserved_id = await self.usage.try_reserve_generative(
+                user_id=user_id, model=settings.GEMINI_MODEL
+            )
+            if reserved_id is None:
                 logger.info(
                     "Dzienny limit modelu generującego wyczerpany dla użytkownika %s",
                     user_id,
@@ -467,15 +470,24 @@ class AICategorizationService:
             logger.error(f"Błąd wywołania Gemini API: {str(e)}", exc_info=True)
             return None
         finally:
-            if invoked:
+            if reserved_id is not None or invoked:
                 try:
-                    await self.usage.record_generative(
-                        user_id=user_id,
-                        model=settings.GEMINI_MODEL,
-                        tokens=tokens,
-                        latency_ms=int((time.perf_counter() - started) * 1000),
-                        outcome=outcome,
-                    )
+                    latency_ms = int((time.perf_counter() - started) * 1000)
+                    if reserved_id is not None:
+                        await self.usage.finish_generative(
+                            reserved_id,
+                            tokens=tokens,
+                            latency_ms=latency_ms,
+                            outcome=outcome,
+                        )
+                    else:
+                        await self.usage.record_generative(
+                            user_id=user_id,
+                            model=settings.GEMINI_MODEL,
+                            tokens=tokens,
+                            latency_ms=latency_ms,
+                            outcome=outcome,
+                        )
                 except Exception:
                     logger.exception("Nie zapisano wywołania modelu")
 

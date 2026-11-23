@@ -164,3 +164,49 @@ async def test_injected_embedder_never_calls_gemini(
     assert seen["task_type"] == "retrieval_query"
     assert seen["output_dimensionality"] == PRODUCT_INDEX_EMBEDDING_DIMENSIONS
     assert seen["model"] == settings.GEMINI_EMBEDDING_MODEL
+
+
+async def test_each_embedding_retry_is_counted(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    from google.api_core import exceptions as google_exceptions
+
+    from src.product_indexes.exceptions import EmbeddingBudgetExceeded
+    from src.product_indexes.gemini_embedding import GeminiProductNameEmbedder
+
+    async def no_sleep(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", no_sleep)
+    calls = 0
+
+    async def embed(**_kwargs: Any) -> dict[str, list[float]]:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise google_exceptions.ResourceExhausted("quota")
+        return {"embedding": FROZEN_PRODUCT_EMBEDDING}
+
+    recorded: list[int] = []
+
+    async def on_attempt(latency_ms: int) -> None:
+        recorded.append(latency_ms)
+
+    checks = 0
+
+    async def before_attempt() -> None:
+        nonlocal checks
+        checks += 1
+        if checks == 3:
+            raise EmbeddingBudgetExceeded
+
+    embedder = GeminiProductNameEmbedder(embed=embed)
+    with pytest.raises(EmbeddingBudgetExceeded):
+        await embedder.embed_name(
+            "mleko",
+            before_attempt=before_attempt,
+            on_attempt=on_attempt,
+        )
+
+    assert calls == 2
+    assert len(recorded) == 2

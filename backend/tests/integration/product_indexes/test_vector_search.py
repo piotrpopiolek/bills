@@ -1,5 +1,7 @@
 """Vector search keeps a near catalog name and drops one below the threshold."""
 
+from collections.abc import Awaitable, Callable
+
 import tests.orm  # noqa: F401
 from sqlalchemy import delete
 from tests.fakes import FrozenProductNameEmbedder
@@ -25,10 +27,19 @@ class NamedEmbedder(FrozenProductNameEmbedder):
         self._vectors = vectors
 
     async def embed_name(
-        self, name: str, *, task_type: str = "retrieval_document"
+        self,
+        name: str,
+        *,
+        task_type: str = "retrieval_document",
+        before_attempt: Callable[[], Awaitable[None]] | None = None,
+        on_attempt: Callable[[int], Awaitable[None]] | None = None,
     ) -> list[float]:
+        if before_attempt is not None:
+            await before_attempt()
         self.calls.append(name)
         self.tasks.append(task_type)
+        if on_attempt is not None:
+            await on_attempt(0)
         return list(self._vectors[name])
 
 

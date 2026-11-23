@@ -1,4 +1,5 @@
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -6,7 +7,12 @@ from google.api_core import exceptions as google_exceptions
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from src.config import settings
-from src.product_indexes.embeddings import EmbeddingTask, embedding_values
+from src.product_indexes.embeddings import (
+    BeforeAttempt,
+    EmbeddingTask,
+    OnAttempt,
+    embedding_values,
+)
 from src.product_indexes.models import PRODUCT_INDEX_EMBEDDING_DIMENSIONS
 
 logger = logging.getLogger(__name__)
@@ -35,9 +41,16 @@ class GeminiProductNameEmbedder:
         self._embed = embed
 
     async def embed_name(
-        self, name: str, *, task_type: EmbeddingTask = "retrieval_document"
+        self,
+        name: str,
+        *,
+        task_type: EmbeddingTask = "retrieval_document",
+        before_attempt: BeforeAttempt | None = None,
+        on_attempt: OnAttempt | None = None,
     ) -> list[float]:
-        vector = embedding_values(await self._request(name, task_type))
+        vector = embedding_values(
+            await self._request(name, task_type, before_attempt, on_attempt)
+        )
         logger.info(
             "Embedded product name with %s (%s, %s dimensions).",
             settings.GEMINI_EMBEDDING_MODEL,
@@ -52,15 +65,28 @@ class GeminiProductNameEmbedder:
         retry=retry_if_exception(_should_retry_embedding_error),
         reraise=True,
     )
-    async def _request(self, name: str, task_type: EmbeddingTask) -> object:
-        embed = self._embed or _gemini_embed_content
-        return await embed(
-            model=settings.GEMINI_EMBEDDING_MODEL,
-            content=name,
-            task_type=task_type,
-            output_dimensionality=PRODUCT_INDEX_EMBEDDING_DIMENSIONS,
-            request_options={"timeout": settings.GEMINI_TIMEOUT},
-        )
+    async def _request(
+        self,
+        name: str,
+        task_type: EmbeddingTask,
+        before_attempt: BeforeAttempt | None,
+        on_attempt: OnAttempt | None,
+    ) -> object:
+        if before_attempt is not None:
+            await before_attempt()
+        started = time.perf_counter()
+        try:
+            embed = self._embed or _gemini_embed_content
+            return await embed(
+                model=settings.GEMINI_EMBEDDING_MODEL,
+                content=name,
+                task_type=task_type,
+                output_dimensionality=PRODUCT_INDEX_EMBEDDING_DIMENSIONS,
+                request_options={"timeout": settings.GEMINI_TIMEOUT},
+            )
+        finally:
+            if on_attempt is not None:
+                await on_attempt(int((time.perf_counter() - started) * 1000))
 
 
 async def _gemini_embed_content(**kwargs: Any) -> object:
