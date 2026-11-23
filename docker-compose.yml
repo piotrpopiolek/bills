@@ -20,9 +20,13 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      - REDIS_URL=redis://redis:6379/0
       - ENV=development
     depends_on:
-      - db
+      db:
+        condition: service_started
+      redis:
+        condition: service_healthy
     networks:
       - bills-network
     healthcheck:
@@ -54,6 +58,45 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: bills-worker
+    working_dir: /app
+    entrypoint: ['arq', 'src.worker.jobs.WorkerSettings']
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - WEB_APP_URL=http://localhost:8082
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      - REDIS_URL=redis://redis:6379/0
+      - ENV=development
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - bills-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.6-alpine
+    container_name: bills-redis
+    ports:
+      - '6379:6379'
+    networks:
+      - bills-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: pgvector/pgvector:pg16

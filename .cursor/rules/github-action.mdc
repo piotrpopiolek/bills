@@ -35,4 +35,4 @@ Job `docker-build` idzie tylko na push. Buduje `backend/Dockerfile` i `astro/Doc
 
 ## Redis
 
-Redis w workflow dochodzi razem z workerem ARQ, z przypiętym tagiem.
+Redis w workflow dochodzi razem z workerem ARQ. Obraz to `redis:7.4.6-alpine`, ten sam w Compose. Job `test` wystawia go na `localhost:6379` i ustawia `REDIS_URL`.

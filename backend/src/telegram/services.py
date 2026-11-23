@@ -14,7 +14,6 @@ from src.telegram.middleware import logging_middleware
 from telegram import Bot, BotCommand, Update
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
     TypeHandler,
@@ -157,11 +156,7 @@ class TelegramBotService:
         commands = [
             BotCommand("start", "Rozpocznij pracę z botem"),
             BotCommand("login", "Zaloguj się do aplikacji webowej"),
-            BotCommand("dzis", "Raport wydatków za dzisiaj"),
-            BotCommand("tydzien", "Raport wydatków za tydzień"),
-            BotCommand("miesiac", "Raport wydatków za miesiąc"),
             BotCommand("prywatnosc", "Polityka prywatności"),
-            BotCommand("verify", "Weryfikuj pozycje z rachunku"),
         ]
 
         try:
@@ -189,32 +184,11 @@ class TelegramBotService:
 
         app.add_handler(CommandHandler("start", handlers.start_command))
         app.add_handler(CommandHandler("login", handlers.login_command))
-        app.add_handler(CommandHandler("dzis", handlers.daily_report_command))
-        app.add_handler(CommandHandler("tydzien", handlers.weekly_report_command))
-        app.add_handler(CommandHandler("miesiac", handlers.monthly_report_command))
         app.add_handler(CommandHandler("prywatnosc", handlers.privacy_command))
-        app.add_handler(CommandHandler("verify", handlers.verify_command))
 
-        # Handle photos (receipts)
         app.add_handler(
             MessageHandler(
                 filters.PHOTO | filters.Document.IMAGE, handlers.handle_receipt_image
-            )
-        )
-
-        # Handle verification callbacks (inline keyboard buttons)
-        app.add_handler(
-            CallbackQueryHandler(
-                handlers.handle_item_verification_callback, pattern=r"^verify:"
-            )
-        )
-
-        # Handle text messages (for item editing during verification)
-        # This handler should run after other message handlers
-        # We check in the handler itself if user is in edit mode
-        app.add_handler(
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND, handlers.handle_item_edit_text
             )
         )
 

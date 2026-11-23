@@ -16,6 +16,7 @@ Bills liczy wydatki z paragonów. Użytkownik wysyła zdjęcie do bota na Telegr
 ## Struktura
 
 - `backend/` — FastAPI (`routes.py`, `schemas.py`, `services.py`, `models.py`)
+- `backend/src/worker` — kolejka ARQ i zadanie `process_receipt`
 - `supabase/migrations/` — schemat bazy
 - `astro/src/pages` — strony i endpointy Astro
 - `astro/src/components` — komponenty Astro i React; Shadcn w `astro/src/components/ui`

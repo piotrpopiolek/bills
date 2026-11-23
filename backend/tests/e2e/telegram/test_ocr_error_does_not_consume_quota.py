@@ -1,4 +1,4 @@
-"""A failed OCR pass must not consume one of the 100 monthly receipts."""
+"""A queued photo counts. A queue failure does not."""
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -8,7 +8,41 @@ from tests.support import bill_count
 EXTERNAL_ID = 8_100_001_801
 
 
-async def test_ocr_failure_does_not_consume_monthly_quota(db_session, owned) -> None:
+async def test_accepted_photo_is_queued_and_counts(db_session, owned) -> None:
+    user = await owned(EXTERNAL_ID)
+    queued: list[int] = []
+
+    async def enqueue(bill_id: int) -> None:
+        queued.append(bill_id)
+
+    update = _update(EXTERNAL_ID)
+    await _run(db_session, user, update, enqueue)
+
+    assert queued
+    counted = await bill_count(db_session, user.id)
+    assert counted == 1
+    update.message.reply_text.return_value.edit_text.assert_awaited_with(
+        f"Zdjęcie przyjęte.\nID: {queued[0]}"
+    )
+
+
+async def test_queue_failure_does_not_consume_monthly_quota(db_session, owned) -> None:
+    user = await owned(EXTERNAL_ID + 1)
+
+    async def enqueue(_bill_id: int) -> None:
+        raise ConnectionError("redis down")
+
+    update = _update(EXTERNAL_ID + 1)
+    await _run(db_session, user, update, enqueue)
+
+    counted = await bill_count(db_session, user.id)
+    assert counted == 0
+    update.message.reply_text.return_value.edit_text.assert_awaited_with(
+        "Nie udało się przyjąć zdjęcia. Spróbuj ponownie."
+    )
+
+
+async def _run(db_session, user, update, enqueue) -> None:
     from src.telegram.context import (
         clear_db_session,
         clear_storage_service,
@@ -19,32 +53,16 @@ async def test_ocr_failure_does_not_consume_monthly_quota(db_session, owned) -> 
     )
     from src.telegram.handlers import handle_receipt_image
 
-    user = await owned(EXTERNAL_ID)
-    storage = _storage(EXTERNAL_ID)
-    processor = AsyncMock()
-    processor.process_receipt = AsyncMock(side_effect=ValueError("ocr failed"))
     set_user(user)
     set_db_session(db_session)
-    set_storage_service(storage)
+    set_storage_service(_storage(user.external_id))
     try:
-        with patch(
-            "src.telegram.handlers.get_bills_processor_service",
-            AsyncMock(return_value=processor),
-        ):
-            await handle_receipt_image(_update(EXTERNAL_ID), _context())
+        with patch("src.telegram.handlers.enqueue_receipt", enqueue):
+            await handle_receipt_image(update, _context())
     finally:
         clear_user()
         clear_db_session()
         clear_storage_service()
-
-    assert storage.upload_file_content.await_count == 1
-    assert processor.process_receipt.await_count == 1
-    counted = await bill_count(db_session, user.id)
-    assert counted == 0, (
-        f"OCR failure left {counted} bill(s) in the monthly count. "
-        "handle_receipt_image inserts the bill before process_receipt, "
-        "and get_bills_count_this_month counts every row."
-    )
 
 
 def _storage(external_id: int) -> MagicMock:

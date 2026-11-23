@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
 
+    # Redis / ARQ. The bot enqueues a bill id; the worker calls process_receipt.
+    REDIS_URL: str = "redis://localhost:6379/0"
+    RECEIPT_JOB_MAX_TRIES: int = 3
+    RECEIPT_JOB_TIMEOUT_SECONDS: int = 300
+    RECEIPT_JOB_RETRY_SECONDS: int = 5
+
     # Supabase (for auth and storage)
     SUPABASE_URL: str | None = None
     SUPABASE_KEY: str | None = None

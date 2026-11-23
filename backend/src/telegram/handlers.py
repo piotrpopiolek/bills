@@ -11,7 +11,6 @@ from src.bills.models import Bill, ProcessingStatus
 from src.bills.schemas import BillCreate, BillResponse, BillUpdate
 from src.bills.services import BillService
 from src.common.exceptions import ResourceNotFoundError
-from src.processing.dependencies import get_bills_processor_service
 from src.reports.exceptions import InvalidDateRangeError, InvalidMonthFormatError
 from src.reports.services import ReportService
 from src.telegram.context import (
@@ -28,6 +27,7 @@ from src.telegram.utils import (
     format_weekly_report,
 )
 from src.users.services import UserService
+from src.worker.queue import enqueue_receipt
 from telegram import CallbackQuery, Update
 from telegram.ext import ContextTypes
 
@@ -511,7 +511,7 @@ async def handle_receipt_image(
     user_id = user.id
 
     # Notify user we are processing
-    status_message = await update.message.reply_text("Przetwarzam zdjęcie...")
+    status_message = await update.message.reply_text("Przyjmuję zdjęcie...")
 
     async with get_or_create_session() as session:
         # Create service instances with proper DI (no direct instantiation)
@@ -644,115 +644,50 @@ async def handle_receipt_image(
                     )
                     return
 
-                # If existing bill is PENDING or PROCESSING, use it and trigger processing
-                bill = existing_bill
-                await status_message.edit_text(
-                    f"Paragon przyjęty! ID: {bill.id}\nRozpoczynam analizę..."
-                )
-            else:
-                # No duplicate found - create new bill
-                # 4. Create Bill record
-                # TODO: Implement Transactional Outbox here for SAGA pattern
-                # Instead of just creating bill, we should also emit 'RECEIPT_UPLOADED' event
-                # bill_date will be set during OCR processing from the receipt data
+                if existing_bill.status == ProcessingStatus.PROCESSING:
+                    await status_message.edit_text(
+                        f"Zdjęcie przyjęte.\nID: {existing_bill.id}"
+                    )
+                    return
 
+                if existing_bill.status == ProcessingStatus.ERROR:
+                    await bill_service.update(
+                        existing_bill.id,
+                        BillUpdate(
+                            status=ProcessingStatus.PENDING,
+                            error_message=None,
+                        ),
+                        user_id,
+                    )
+                bill = existing_bill
+            else:
                 bill = await bill_service.create(
                     BillCreate(
-                        bill_date=None,  # Will be extracted from receipt via OCR
+                        bill_date=None,
                         user_id=user_id,
-                        image_url=image_url,  # We store the internal storage path here
+                        image_url=image_url,
                         image_hash=image_hash,
                         image_expires_at=storage_service.calculate_expiration_date(),
                         status=ProcessingStatus.PENDING,
                     )
                 )
 
-                await status_message.edit_text(
-                    f"Paragon przyjęty! ID: {bill.id}\nRozpoczynam analizę..."
-                )
-
-            # Trigger bill processing via BillsProcessorService
             try:
-                # Get processor via factory function (DI pattern)
-                # Session jest już dostępny z 'async with get_or_create_session() as session:'
-                processor = await get_bills_processor_service(session=session)
-
-                # Process receipt (OCR → AI → Database)
-                await processor.process_receipt(bill.id)
-
-                # Pobierz zaktualizowany bill z relacjami do wyświetlenia statystyk
-                stmt = (
-                    select(Bill)
-                    .where(Bill.id == bill.id)
-                    .options(selectinload(Bill.bill_items))
-                )
-                result = await session.execute(stmt)
-                updated_bill = result.scalar_one()
-
-                # Sprawdź status i wyświetl odpowiedni komunikat
-                if updated_bill.status == ProcessingStatus.COMPLETED:
-                    items_count = (
-                        len(updated_bill.bill_items) if updated_bill.bill_items else 0
-                    )
-                    await status_message.edit_text(
-                        f"✅ Paragon przetworzony!\n"
-                        f"ID: {bill.id}\n"
-                        f"Znaleziono {items_count} pozycji.\n"
-                        f"Kwota: {updated_bill.total_amount:.2f} PLN"
-                    )
-                elif updated_bill.status == ProcessingStatus.ERROR:
-                    error_msg = (
-                        updated_bill.error_message[:100]
-                        if updated_bill.error_message
-                        else "Nieznany błąd"
-                    )
-                    await status_message.edit_text(
-                        f"⚠️ Paragon zapisany, ale wystąpił błąd podczas analizy.\n"
-                        f"ID: {bill.id}\n"
-                        f"Błąd: {error_msg}\n"
-                        f"Spróbuj ponownie później lub skontaktuj się z supportem."
-                    )
-                elif updated_bill.status == ProcessingStatus.TO_VERIFY:
-                    items_count = (
-                        len(updated_bill.bill_items) if updated_bill.bill_items else 0
-                    )
-                    unverified_count = sum(
-                        1 for item in updated_bill.bill_items if not item.is_verified
-                    )
-
-                    await status_message.edit_text(
-                        f"✅ Paragon przetworzony!\n"
-                        f"ID: {bill.id}\n"
-                        f"Znaleziono {items_count} pozycji.\n"
-                        f"Kwota: {updated_bill.total_amount:.2f} PLN\n"
-                        f"⚠️ {unverified_count} pozycji wymaga weryfikacji.\n\n"
-                        f"Rozpoczynam weryfikację..."
-                    )
-
-                    # Automatycznie rozpocznij proces weryfikacji
-                    # Pass user_id to avoid lazy-loading issues when accessing user.id
-                    await start_bill_verification(update, context, bill.id, user_id)
-                else:
-                    # Status PROCESSING (nie powinno się zdarzyć, ale na wszelki wypadek)
-                    await status_message.edit_text(
-                        f"⏳ Paragon w trakcie przetwarzania...\nID: {bill.id}"
-                    )
-
-            except Exception as e:
+                await enqueue_receipt(bill.id)
+            except Exception as exc:
                 logger.error(
-                    f"Error processing receipt bill_id={bill.id}: {e}", exc_info=True
+                    f"Error queueing receipt bill_id={bill.id}: {exc}",
+                    exc_info=True,
                 )
-                # The processor usually persists ERROR before re-raising. A caller
-                # that only raises would leave the row PENDING, and PENDING still
-                # consumes the monthly quota. Persist ERROR here so the slot is freed.
                 await _mark_receipt_processing_failed(
-                    bill_service, bill.id, user_id, str(e)
+                    bill_service, bill.id, user_id, str(exc)
                 )
                 await status_message.edit_text(
-                    f"⚠️ Paragon zapisany, ale wystąpił błąd podczas analizy.\n"
-                    f"ID: {bill.id}\n"
-                    f"Spróbuj ponownie później lub skontaktuj się z supportem."
+                    "Nie udało się przyjąć zdjęcia. Spróbuj ponownie."
                 )
+                return
+
+            await status_message.edit_text(f"Zdjęcie przyjęte.\nID: {bill.id}")
 
         except ResourceNotFoundError as e:
             logger.error(
