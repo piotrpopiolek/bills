@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateTrend,
   calendarDateInput,
+  calendarDateToStored,
   formatCurrency,
   formatDate,
   formatShopName,
@@ -37,6 +38,10 @@ describe('calendarDateInput', () => {
     if (localDay !== iso.slice(0, 10)) {
       expect(calendarDateInput(iso)).not.toBe(iso.slice(0, 10));
     }
+  });
+
+  it('stores a local day so reading it back keeps that day', () => {
+    expect(calendarDateInput(calendarDateToStored('2026-11-24'))).toBe('2026-11-24');
   });
 });
 

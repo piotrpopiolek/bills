@@ -17,11 +17,7 @@ export function formatCurrency(
   return `${formatted} ${currency}`;
 }
 
-/**
- * Formatuje datę do wyświetlenia
- * @param date - Data jako string ISO 8601 lub obiekt Date
- * @returns Sformatowana data (np. "15.01.2024")
- */
+/** Local calendar day for a date input. The UTC prefix can be the previous day. */
 export function calendarDateInput(value: string | null | undefined): string {
   if (!value) {
     return '';
@@ -34,6 +30,24 @@ export function calendarDateInput(value: string | null | undefined): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
 }
+
+/** Noon in the local zone, so storing the value does not cross into another day. */
+export function calendarDateToStored(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return value;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return new Date(year, month - 1, day, 12, 0, 0, 0).toISOString();
+}
+
+/**
+ * Formatuje datę do wyświetlenia
+ * @param date - Data jako string ISO 8601 lub obiekt Date
+ * @returns Sformatowana data (np. "15.01.2024")
+ */
 
 export function formatDate(date: string | Date): string {
   try {

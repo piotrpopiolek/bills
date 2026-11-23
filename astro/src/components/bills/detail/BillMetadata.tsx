@@ -4,7 +4,7 @@ import { BillStatusBadge } from '../BillStatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExternalLink } from 'lucide-react';
-import { calendarDateInput, formatShopName } from '@/lib/utils/formatting';
+import { calendarDateInput, calendarDateToStored, formatShopName } from '@/lib/utils/formatting';
 
 export function receiptShop(bill: BillResponse): {
   id: number | null;
@@ -172,7 +172,7 @@ export const BillMetadata: React.FC<BillMetadataProps> = ({
           setSaving(true);
           const patch: { bill_date?: string; shop_id?: number; shop_name?: string } = {};
           if (billDate) {
-            patch.bill_date = billDate;
+            patch.bill_date = calendarDateToStored(billDate);
           }
           if (shopName.trim()) {
             patch.shop_name = shopName.trim();

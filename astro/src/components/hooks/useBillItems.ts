@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { BillItemResponse, BillItemListResponse } from '@/types';
+import type { BillItemResponse } from '@/types';
 import { getBillItems } from '@/lib/services/bills';
 
 interface UseBillItemsReturn {
