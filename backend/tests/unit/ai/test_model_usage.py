@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock
 import pytest
 from tests.fakes import FrozenProductNameEmbedder
 
-from src.ai.usage import call_cost, generative_call_allowed, run_if_allowed
+from src.ai.usage import (
+    budget_covers,
+    call_cost,
+    generative_call_allowed,
+    run_if_allowed,
+)
 from src.product_indexes.exceptions import EmbeddingBudgetExceeded
 from src.product_indexes.services import ProductIndexService
 
@@ -21,6 +26,11 @@ def test_lock_keys_do_not_collide() -> None:
 
     assert _lock_key("embedding", None) != _lock_key("generative", 1)
     assert _lock_key("generative", 1) != _lock_key("generative", 2)
+
+
+def test_receipt_needs_a_slot_for_every_line() -> None:
+    assert budget_covers(48, 2, 50) is True
+    assert budget_covers(49, 2, 50) is False
 
 
 def test_limit_blocks_at_the_boundary() -> None:

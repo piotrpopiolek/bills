@@ -17,7 +17,7 @@ from starlette.datastructures import Headers
 
 from src.ai.schemas import NormalizedItem
 from src.ai.service import AICategorizationService
-from src.ai.usage import CallOutcome, ModelUsage
+from src.ai.usage import CallOutcome, ModelUsage, take_unused_prepaid, use_prepaid_slots
 from src.bill_items.models import VerificationSource
 from src.bill_items.schemas import BillItemCreate
 from src.bill_items.services import BillItemService
@@ -128,16 +128,35 @@ class BillsProcessorService:
                 ocr_data.shop_name, ocr_data.shop_address
             )
 
-            # Step 6: AI Categorization & Normalization (POZA transakcją DB)
-            # KRYTYCZNE: Wywołania Gemini API (w AI service) muszą być PRZED transakcjami DB
-            # Serwis AI może używać własnych krótkich transakcji do odczytu (read-only),
-            # ale nie powinien blokować połączenia czekając na Gemini.
-            normalized_items = await self._normalize_items(
-                ocr_data.items,
-                shop_id=shop_id,
-                shop_name=ocr_data.shop_name,
-                user_id=bill.user_id,
-            )
+            # Step 6: Reserve one generative slot per line before any item calls the model.
+            prepaid_token = None
+            if bill.user_id is not None and ocr_data.items:
+                slots = await ModelUsage(self.session).try_reserve_generative_many(
+                    user_id=bill.user_id,
+                    model=settings.GEMINI_MODEL,
+                    count=len(ocr_data.items),
+                )
+                if slots is None:
+                    await self._set_error(
+                        bill_id, "Dzienny limit modelu został wyczerpany"
+                    )
+                    return
+                prepaid_token = use_prepaid_slots(slots)
+            try:
+                normalized_items = await self._normalize_items(
+                    ocr_data.items,
+                    shop_id=shop_id,
+                    shop_name=ocr_data.shop_name,
+                    user_id=bill.user_id,
+                )
+            finally:
+                if prepaid_token is not None:
+                    usage = ModelUsage(self.session)
+                    for call_id in take_unused_prepaid(prepaid_token):
+                        try:
+                            await usage.release(call_id)
+                        except Exception:
+                            logger.exception("Nie zwolniono rezerwacji modelu")
 
             # Detailed logging of normalized items
             logger.info(
