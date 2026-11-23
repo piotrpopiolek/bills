@@ -27,7 +27,7 @@ Wspólny setup to [`.github/actions/setup-backend`](.github/actions/setup-backen
 
 Job `frontend` działa w `astro/`. Node 20, cache z `astro/package-lock.json`, `npm ci`, potem `astro check` i Vitest. Oba zostają.
 
-Job E2E Playwright ma macierz `chromium`, `firefox`, `msedge`, z `fail-fast: false`, jak w Cogitomedice. Projekty są te same co w `astro/playwright.config.ts`.
+Job E2E Playwright ma macierz `chromium`, `firefox`, `msedge`, z `fail-fast: false`, jak w Cogitomedice. Projekty są te same co w `astro/playwright.config.ts`. Runner tego joba to `ubuntu-24.04`, bo Playwright 1.57 nie ma buildów na Ubuntu 26.04.
 
 ## Obrazy
 
