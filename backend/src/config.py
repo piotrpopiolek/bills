@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     # Supabase (for auth and storage)
     SUPABASE_URL: str | None = None
+    # Host the browser uses for signed file URLs. The server may use another host.
+    SUPABASE_PUBLIC_URL: str | None = None
     SUPABASE_KEY: str | None = None
     SUPABASE_SERVICE_ROLE_KEY: str | None = None
     SUPABASE_STORAGE_BUCKET: str = "bills"

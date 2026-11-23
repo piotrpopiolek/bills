@@ -1,11 +1,13 @@
 import hashlib
 import logging
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from supabase import Client, create_client
 
 from src.config import settings
+from src.storage.urls import browser_storage_url
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +129,10 @@ class StorageService:
             signed_url = (
                 response.get("signedURL") if isinstance(response, dict) else None
             )
-            return signed_url or ""
+            public_base = os.environ.get("SUPABASE_PUBLIC_URL") or getattr(
+                settings, "SUPABASE_PUBLIC_URL", None
+            )
+            return browser_storage_url(signed_url or "", public_base)
         except Exception as e:
             logger.error(f"Failed to generate signed URL: {e}", exc_info=True)
             return ""

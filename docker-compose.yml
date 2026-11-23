@@ -20,6 +20,7 @@ services:
       # Storage API on the host is 127.0.0.1:54321. Inside the container that
       # address is the container itself.
       - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_PUBLIC_URL=http://127.0.0.1:54321
       - WEB_APP_URL=http://localhost:8082
       - REDIS_URL=redis://redis:6379/0
       - ENV=development
@@ -78,6 +79,7 @@ services:
       - PORT=8000
       - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
       - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_PUBLIC_URL=http://127.0.0.1:54321
       - WEB_APP_URL=http://localhost:8082
       - REDIS_URL=redis://redis:6379/0
       - ENV=development
