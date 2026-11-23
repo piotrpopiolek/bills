@@ -198,7 +198,9 @@ export interface PendingVerificationItem extends Pick<BillItem, 'id' | 'quantity
 
 export type PendingVerificationResponse = PaginatedResponse<PendingVerificationItem>
 
-export type BillItemListResponse = PaginatedResponse<BillItemResponse>
+export interface BillItemListResponse extends PaginatedResponse<BillItemResponse> {
+  items_sum: number | string
+}
 
 // ============================================================================
 // BILL DTOs

@@ -30,6 +30,11 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({ billId }) => {
 
   const {
     items,
+    itemsSum,
+    total: itemTotal,
+    limit: itemLimit,
+    skip: itemSkip,
+    setSkip: setItemSkip,
     isLoading: isItemsLoading,
     error: itemsError,
     refetch: refetchItems,
@@ -163,11 +168,25 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({ billId }) => {
 
       <BillItemsSection
         items={items}
+        itemTotal={itemTotal}
+        itemsSum={itemsSum}
+        skip={itemSkip}
+        limit={itemLimit}
         isLoading={isItemsLoading}
         totalAmount={bill.total_amount}
+        onPageChange={setItemSkip}
         onCreateItem={async (item) => {
           await createBillItem(bill.id, item);
-          await refetchItems();
+          const nextTotal = itemTotal + 1;
+          const lastSkip =
+            nextTotal <= 0
+              ? 0
+              : Math.floor((nextTotal - 1) / itemLimit) * itemLimit;
+          if (lastSkip === itemSkip) {
+            await refetchItems();
+          } else {
+            setItemSkip(lastSkip);
+          }
         }}
         onSaveItem={async (itemId, patch) => {
           await updateBillItem(bill.id, itemId, patch);
@@ -175,7 +194,14 @@ export const BillDetailView: React.FC<BillDetailViewProps> = ({ billId }) => {
         }}
         onDeleteItem={async (itemId) => {
           await deleteBillItem(bill.id, itemId);
-          await refetchItems();
+          const remaining = itemTotal - 1;
+          const maxSkip =
+            remaining <= 0 ? 0 : Math.floor((remaining - 1) / itemLimit) * itemLimit;
+          if (itemSkip > maxSkip) {
+            setItemSkip(maxSkip);
+          } else {
+            await refetchItems();
+          }
         }}
       />
 

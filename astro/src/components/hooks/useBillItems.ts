@@ -8,6 +8,7 @@ interface UseBillItemsReturn {
   limit: number;
   isLoading: boolean;
   error: Error | null;
+  itemsSum: number | string | null;
   skip: number;
   setSkip: (skip: number) => void;
   refetch: () => Promise<void>;
@@ -19,6 +20,7 @@ export const useBillItems = (
   initialLimit: number = 100
 ): UseBillItemsReturn => {
   const [items, setItems] = useState<BillItemResponse[]>([]);
+  const [itemsSum, setItemsSum] = useState<number | string | null>(null);
   const [total, setTotal] = useState<number>(0);
   const [limit, setLimit] = useState<number>(initialLimit);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -42,6 +44,7 @@ export const useBillItems = (
       });
 
       setItems(response.items || []);
+      setItemsSum(response.items_sum ?? null);
       setTotal(response.total || 0);
       setLimit(response.limit || initialLimit);
     } catch (err) {
@@ -50,6 +53,7 @@ export const useBillItems = (
         err instanceof Error ? err : new Error('An unknown error occurred')
       );
       setItems([]);
+      setItemsSum(null);
       setTotal(0);
     } finally {
       setIsLoading(false);
@@ -62,6 +66,7 @@ export const useBillItems = (
 
   return {
     items,
+    itemsSum,
     total,
     limit,
     isLoading,

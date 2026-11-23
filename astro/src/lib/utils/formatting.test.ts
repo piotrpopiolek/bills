@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   calculateTrend,
+  calendarDateInput,
   formatCurrency,
   formatDate,
   formatShopName,
@@ -21,6 +22,21 @@ describe('formatCurrency', () => {
     const formatted =
       currency === undefined ? formatCurrency(amount) : formatCurrency(amount, currency);
     expect(formatted).toBe(expected);
+  });
+});
+
+describe('calendarDateInput', () => {
+  it('uses the local calendar day rather than the UTC date prefix', () => {
+    const iso = '2026-11-23T23:30:00.000Z';
+    const date = new Date(iso);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const localDay = `${date.getFullYear()}-${month}-${day}`;
+
+    expect(calendarDateInput(iso)).toBe(localDay);
+    if (localDay !== iso.slice(0, 10)) {
+      expect(calendarDateInput(iso)).not.toBe(iso.slice(0, 10));
+    }
   });
 });
 

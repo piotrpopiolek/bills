@@ -8,8 +8,13 @@ import type { ItemWrite } from '@/lib/services/bills';
 
 interface BillItemsSectionProps {
   items: BillItemResponse[];
+  itemTotal: number;
+  itemsSum: number | string | null;
+  skip: number;
+  limit: number;
   isLoading: boolean;
   totalAmount: number | string | null;
+  onPageChange: (skip: number) => void;
   onSaveItem: (itemId: number, patch: ItemWrite) => Promise<void>;
   onCreateItem: (item: Required<ItemWrite>) => Promise<void>;
   onDeleteItem: (itemId: number) => Promise<void>;
@@ -17,8 +22,13 @@ interface BillItemsSectionProps {
 
 export const BillItemsSection: React.FC<BillItemsSectionProps> = ({
   items,
+  itemTotal,
+  itemsSum,
+  skip,
+  limit,
   isLoading,
   totalAmount,
+  onPageChange,
   onSaveItem,
   onCreateItem,
   onDeleteItem,
@@ -27,16 +37,13 @@ export const BillItemsSection: React.FC<BillItemsSectionProps> = ({
   const [editing, setEditing] = useState<BillItemResponse | null>(null);
   const [editDraft, setEditDraft] = useState({ name: '', quantity: '', unitPrice: '', totalPrice: '' });
   const [formError, setFormError] = useState<string | null>(null);
-  // Calculate sum of all items
-  const itemsSum = useMemo(() => {
-    if (!items || items.length === 0) {
-      return 0;
+  const parsedItemsSum = useMemo(() => {
+    if (itemsSum === null || itemsSum === undefined) {
+      return null;
     }
-    return items.reduce((sum, item) => {
-      const price = parseFloat(item.total_price);
-      return sum + (isNaN(price) ? 0 : price);
-    }, 0);
-  }, [items]);
+    const parsed = typeof itemsSum === 'string' ? parseFloat(itemsSum) : itemsSum;
+    return Number.isNaN(parsed) ? null : parsed;
+  }, [itemsSum]);
 
   // Format amount
   const formatAmount = (amount: number | string | null): string => {
@@ -57,7 +64,9 @@ export const BillItemsSection: React.FC<BillItemsSectionProps> = ({
     const parsed = typeof totalAmount === 'string' ? parseFloat(totalAmount) : totalAmount;
     return Number.isNaN(parsed) ? null : parsed;
   }, [totalAmount]);
-  const difference = sumDifference(itemsSum, receiptTotal);
+  const difference = sumDifference(parsedItemsSum ?? Number.NaN, receiptTotal);
+  const page = Math.floor(skip / Math.max(limit, 1)) + 1;
+  const pageCount = Math.max(1, Math.ceil(itemTotal / Math.max(limit, 1)));
 
   const startEdit = (item: BillItemResponse) => {
     setEditing(item);
@@ -74,7 +83,7 @@ export const BillItemsSection: React.FC<BillItemsSectionProps> = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">
-          Pozycje paragonu ({items.length})
+          Pozycje paragonu ({itemTotal})
         </h2>
       </div>
 
@@ -185,11 +194,37 @@ export const BillItemsSection: React.FC<BillItemsSectionProps> = ({
         }}
       />
 
-      {!isLoading && items.length > 0 && (
+      {pageCount > 1 && (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page <= 1 || isLoading}
+            onClick={() => onPageChange(Math.max(0, skip - limit))}
+          >
+            Poprzednia
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Strona {page} z {pageCount}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page >= pageCount || isLoading}
+            onClick={() => onPageChange(skip + limit)}
+          >
+            Następna
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && itemTotal > 0 && parsedItemsSum !== null && (
         <div className="flex flex-col items-end gap-2">
           <div className="text-right">
             <span className="text-sm text-muted-foreground">Suma pozycji: </span>
-            <span className="font-medium">{formatAmount(itemsSum)}</span>
+            <span className="font-medium">{formatAmount(parsedItemsSum)}</span>
           </div>
           {totalAmount !== null && totalAmount !== undefined && (
             <>

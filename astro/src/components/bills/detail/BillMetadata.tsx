@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { BillResponse, ShopResponse } from '@/types';
 import { BillStatusBadge } from '../BillStatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExternalLink } from 'lucide-react';
-import { formatShopName } from '@/lib/utils/formatting';
+import { calendarDateInput, formatShopName } from '@/lib/utils/formatting';
+
+export function receiptShop(bill: BillResponse): {
+  id: number | null;
+  name: string | null;
+} {
+  return {
+    id: bill.shop_id ?? bill.shop?.id ?? null,
+    name: bill.shop_name || bill.shop?.name || null,
+  };
+}
 
 interface BillMetadataProps {
   bill: BillResponse;
@@ -23,11 +33,15 @@ export const BillMetadata: React.FC<BillMetadataProps> = ({
   onShopClick,
   onSave,
 }) => {
-  const [billDate, setBillDate] = useState(bill.bill_date?.slice(0, 10) ?? '');
+  const savedDate = calendarDateInput(bill.bill_date);
+  const [billDate, setBillDate] = useState(savedDate);
   const [shopId, setShopId] = useState(bill.shop_id ? String(bill.shop_id) : '');
   const [shopName, setShopName] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    setBillDate(savedDate);
+  }, [savedDate]);
   // Format date
   const formatDate = (dateString: string): string => {
     try {
@@ -64,6 +78,9 @@ export const BillMetadata: React.FC<BillMetadataProps> = ({
     }
   };
 
+  const shop = receiptShop(bill);
+  const linkedShopId = shop.id;
+
   return (
     <div className="rounded-md border p-4">
       <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -89,21 +106,17 @@ export const BillMetadata: React.FC<BillMetadataProps> = ({
             Sklep
           </dt>
           <dd>
-            {bill.shop_name || bill.shop?.name ? (
-              bill.shop?.id ? (
-                <Button
-                  variant="link"
-                  className="h-auto p-0 text-sm font-medium"
-                  onClick={() => handleShopClick(bill.shop!.id)}
-                >
-                  {formatShopName(bill.shop_name || bill.shop!.name)}
-                  <ExternalLink className="ml-1 h-3 w-3" />
-                </Button>
-              ) : (
-                <span className="text-sm font-medium">
-                  {formatShopName(bill.shop_name || bill.shop!.name)}
-                </span>
-              )
+            {shop.name && linkedShopId != null ? (
+              <Button
+                variant="link"
+                className="h-auto p-0 text-sm font-medium"
+                onClick={() => handleShopClick(linkedShopId)}
+              >
+                {formatShopName(shop.name)}
+                <ExternalLink className="ml-1 h-3 w-3" />
+              </Button>
+            ) : shop.name ? (
+              <span className="text-sm font-medium">{formatShopName(shop.name)}</span>
             ) : (
               <span className="text-sm text-muted-foreground">
                 Nieznany sklep

@@ -334,6 +334,11 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         )
         count_result = await self.session.execute(count_stmt)
         total = count_result.scalar() or 0
+        items_sum = await self.session.scalar(
+            select(func.coalesce(func.sum(BillItem.total_price), 0)).where(
+                BillItem.bill_id == bill_id
+            )
+        )
 
         # Fetch items with eager loading of index and category relationships (prevents N+1 queries)
         # Uses LEFT JOIN to load index and category data in a single query
@@ -355,7 +360,13 @@ class BillItemService(AppService[BillItem, BillItemCreate, BillItemUpdate]):
         # Convert to response schemas with index_name and category_name
         items_with_names = [self._to_response(item) for item in items]
 
-        return {"items": items_with_names, "total": total, "skip": skip, "limit": limit}
+        return {
+            "items": items_with_names,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "items_sum": items_sum if items_sum is not None else 0,
+        }
 
     async def get_by_id(  # type: ignore[override]
         self, bill_item_id: int

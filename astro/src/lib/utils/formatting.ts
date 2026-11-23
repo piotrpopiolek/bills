@@ -22,6 +22,19 @@ export function formatCurrency(
  * @param date - Data jako string ISO 8601 lub obiekt Date
  * @returns Sformatowana data (np. "15.01.2024")
  */
+export function calendarDateInput(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 export function formatDate(date: string | Date): string {
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
