@@ -1,3 +1,10 @@
+def catalog_name_without_category(
+    *, has_catalog_product: bool, category_id: int | None
+) -> bool:
+    """A catalog hit with no category does not call the generative model."""
+    return has_catalog_product and category_id is None
+
+
 def normalization_confidence(
     *,
     product_category_id: int | None,

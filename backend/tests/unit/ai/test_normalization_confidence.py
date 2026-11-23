@@ -1,6 +1,20 @@
 """A catalog name without a category is not a confident categorization."""
 
-from src.ai.confidence import normalization_confidence
+from src.ai.confidence import catalog_name_without_category, normalization_confidence
+
+
+def test_catalog_name_without_category_skips_the_generative_model() -> None:
+    assert (
+        catalog_name_without_category(has_catalog_product=True, category_id=None)
+        is True
+    )
+    assert (
+        catalog_name_without_category(has_catalog_product=True, category_id=4) is False
+    )
+    assert (
+        catalog_name_without_category(has_catalog_product=False, category_id=None)
+        is False
+    )
 
 
 def test_catalog_category_is_fully_confident() -> None:

@@ -11,7 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from src.ai.catalog_prompt import build_categorization_prompt, hits_for_categorization
-from src.ai.confidence import normalization_confidence
+from src.ai.confidence import (
+    catalog_name_without_category,
+    normalization_confidence,
+)
 from src.ai.schemas import NormalizedItem
 from src.ai.usage import CallOutcome, ModelUsage, generative_call_allowed
 from src.categories.models import Category
@@ -268,8 +271,9 @@ class AICategorizationService:
 
         Priorytety:
         1. Jeśli product_index ma istniejącą kategorię, użyj jej.
-        2. W przeciwnym razie zapytaj Gemini, także gdy nazwa jest z katalogu.
-        3. Gdy model nie wskaże kategorii, użyj "Inne".
+        2. Jeśli nazwa jest z katalogu, a kategorii nie ma, użyj "Inne" bez modelu.
+        3. W przeciwnym razie zapytaj Gemini.
+        4. Gdy model nie wskaże kategorii, użyj "Inne".
 
         Args:
             product_index: ProductIndex znaleziony przez normalizację (lub None)
@@ -300,6 +304,18 @@ class AICategorizationService:
                     f"ProductIndex (ID: {product_index.id}) ma nieistniejące category_id: "
                     f"{product_index.category_id}. Przechodzę do AI Categorization."
                 )
+
+        if catalog_name_without_category(
+            has_catalog_product=product_index is not None,
+            category_id=product_index.category_id
+            if product_index is not None
+            else None,
+        ):
+            logger.info(
+                "Katalog ma nazwę bez kategorii (ID: %s). Model generujący się nie woła.",
+                product_index.id if product_index is not None else None,
+            )
+            return await self.category_service.get_fallback_category()
 
         available_categories = await self.category_service.get_all_categories()
         ai_category_id = await self._ai_categorize_product(
